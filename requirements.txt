@@ -1,0 +1,41 @@
+# Milestone 0-1 dependencies. SQLAlchemy, Alembic, python-jose etc. are
+# added in later milestones as each one needs them, rather than
+# front-loaded here.
+
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+asyncpg==0.30.0
+python-dotenv==1.0.1
+pydantic==2.10.4
+pydantic-settings==2.7.1
+
+# --- test dependencies ---
+pytest==8.3.4
+pytest-asyncio==0.25.2
+httpx==0.28.1
+
+sqlalchemy[asyncio]==2.0.36
+alembic==1.14.0
+email-validator==2.2.0
+
+# --- Milestone 4: authentication ---
+# bcrypt pinned below 4.1: passlib 1.7.4 reads bcrypt.__about__.__version__,
+# which newer bcrypt releases removed, and raises on hash() otherwise.
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
+pyjwt==2.10.1
+
+# --- Milestone 10: S3-compatible object storage ---
+boto3==1.35.90
+
+# --- Milestone 14: PDF generation ---
+# reportlab over weasyprint: pure pip-installable, no system Pango/Cairo/
+# GDK-pixbuf dependency — matches "keep the template intentionally plain
+# for MVP" without adding OS-level setup risk.
+reportlab==4.2.5
+# Test-only: extracts text back out of generated PDF bytes so tests can
+# assert on actual rendered content, not just "a file was created."
+pypdf==5.1.0
+
+# --- Milestone 18: AI integration ---
+anthropic==1.2.0

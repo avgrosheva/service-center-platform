@@ -1,0 +1,67 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: fsp
+      POSTGRES_PASSWORD: dev_password_change_me
+      POSTGRES_DB: field_service
+    ports:
+      - "5433:5432"
+    volumes:
+      - fsp_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fsp -d field_service"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    # S3-compatible object storage for local dev (Milestone 10) — the
+    # Technical Blueprint names MinIO explicitly as the local/self-hosted
+    # option alongside AWS S3 / Yandex Object Storage in production; the
+    # app talks to whichever via the same boto3 client, just a different
+    # S3_ENDPOINT_URL.
+    image: minio/minio:latest
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - fsp_minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # Overrides .env's DATABASE_URL/S3_ENDPOINT_URL hosts so the app
+      # container reaches its dependencies by their service name rather
+      # than localhost.
+      DATABASE_URL: postgresql+asyncpg://fsp:dev_password_change_me@db:5432/field_service
+      S3_ENDPOINT_URL: http://minio:9000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/code/app
+    depends_on:
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+volumes:
+  fsp_postgres_data:
+  fsp_minio_data:
