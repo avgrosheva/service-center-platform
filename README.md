@@ -1,4 +1,4 @@
-# Kora Repair Platform — Backend
+# Field Service Platform — Backend
 
 Field service repair operations MVP backend. FastAPI + PostgreSQL + SQLAlchemy Async + Alembic + Pydantic v2, Router → Service → SQLAlchemy architecture.
 
@@ -41,7 +41,7 @@ curl http://localhost:8000/health
 # {"status":"ok","database":"connected"}
 ```
 
-Postgres data persists in the `kora_postgres_data` volume across restarts. To reset it: `docker compose down -v`.
+Postgres data persists in the `fsp_postgres_data` volume across restarts (MinIO's in `fsp_minio_data`). To reset either: `docker compose down -v`.
 
 ## Option B — Run locally without Docker (Windows / PowerShell)
 
@@ -54,9 +54,10 @@ pip install -r requirements.txt
 
 Copy-Item .env.example .env
 # Edit .env: set DATABASE_URL to point at your local Postgres instance,
-# e.g. postgresql+asyncpg://kora:kora_dev_password@localhost:5432/kora_repair
-# (create the `kora_repair` database and `kora` user yourself if running
-# Postgres natively rather than via docker-compose's db service)
+# e.g. postgresql+asyncpg://fsp:dev_password_change_me@localhost:5432/field_service
+# (create the `field_service` database and `fsp` user yourself if running
+# Postgres natively rather than via docker-compose's db service — see
+# docker-compose.yml's db service for the exact credentials used there)
 
 uvicorn app.main:app --reload
 ```
