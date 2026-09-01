@@ -1,403 +1,242 @@
-# Service Center Platform --- Product Case Study
-
-## Overview
-
-Service Center Platform is a lightweight operational platform for small
-field-service and repair companies.
-
-The product is organized around one central idea: the **Repair Job** is
-the unit that connects the customer request to the work the business
-actually performs.
-
-``` text
-Customer → Repair Job → Technician → Work → Payment → Documents → Warranty
-```
-
-The MVP focuses on making that lifecycle visible and traceable without
-expanding into a full ERP, accounting package, inventory system, or
-marketplace.
+# Service Center Platform — Product Case Study
 
 ## Problem
 
-Small service businesses can operate with a fragmented set of tools:
-customer conversations in messaging apps, schedules in spreadsheets,
-repair details in technicians' notes, payments in a separate list, and
-warranty history in people's memory.
+Small field-service and repair businesses can run a large part of their operation through chats, spreadsheets, paper notes, and individual employees' memory.
 
-The problem is not simply that information is stored in several places.
-The larger issue is that there is no single operational record showing
-what is happening with a repair from intake to closure.
-
-That creates uncertainty around questions such as:
-
--   What jobs are currently active?
--   Who is responsible for each job?
--   What has already happened on the job?
--   Was additional work discovered and approved?
--   What materials were used?
--   Has the customer paid?
--   Was a repair document generated?
--   Is a later repair potentially covered by warranty?
+The resulting problem is not only fragmented data. It is the absence of a single operational record that answers what is happening with a repair from customer request through completion, payment, documentation, and possible warranty follow-up.
 
 ## Target Customer
 
-The product is designed for small field-service and repair companies
-where an owner or dispatcher still has direct involvement in daily
-operations and technicians perform work in the field.
+Service Center Platform is designed for small field-service and repair companies with lean operational teams.
 
-Examples of relevant service contexts include appliance, HVAC,
-refrigeration, boiler, coffee-machine, and similar repair businesses.
+The product fits businesses where an owner or dispatcher coordinates work and technicians perform repairs in the field. These teams need more structure than messaging and spreadsheets provide, but do not necessarily need the scope and complexity of a full ERP.
 
-The product assumes a relatively lean operation that needs more
-structure than chats and spreadsheets provide, but does not need the
-complexity of a large ERP.
-
-Primary product roles are:
-
--   **Owner / Manager** --- needs visibility across jobs, team activity,
-    payments, and operational exceptions.
--   **Dispatcher** --- creates jobs, connects customers and equipment,
-    assigns technicians, and tracks progress.
--   **Technician** --- works from assigned jobs and records operational
-    information such as status updates, photos, notes, materials, and
-    additional work.
+The implemented product supports organization users and technician assignment, while the frontend provides authenticated operational views for the main workflows.
 
 ## Operational Problems
 
 ### Fragmented customer and equipment history
 
-A repeat customer or previously repaired unit may already have useful
-history, but that history is difficult to use when it lives across chat
-threads or informal notes.
+A repeat customer or previously serviced unit may already have useful repair history, but that context is difficult to use when it is scattered across tools.
 
-### Unclear job ownership and status
+### Unclear job status and ownership
 
-When assignments and status updates happen verbally or through
-messaging, it becomes difficult to maintain a reliable view of what is
-new, assigned, in progress, delayed, completed, or cancelled.
+Without a shared job record, it is difficult to see which work is new, assigned, in progress, waiting, completed, or cancelled — and which technician owns it.
 
-### Field knowledge disappears
+### Field activity is easy to lose
 
-The technician knows what happened during a repair, but that knowledge
-has limited operational value if it never becomes part of the job
-record.
+Photos, notes, materials, and status updates produced during a repair need to remain connected to the job instead of disappearing into chats or personal notes.
 
-### Additional work can become lost revenue
+### Additional work can fall through the gap
 
-A technician may discover extra work on-site, but a verbal agreement is
-easy to lose between the field and the office. The product therefore
-treats additional work as a structured object rather than an informal
-note.
+Extra work discovered during diagnosis is operationally and commercially important. If it exists only as a conversation, it can be forgotten, performed without clear approval, or fail to make it into the final job value.
 
-### Payments are disconnected from operations
+### Payment is separated from completion
 
-The MVP does not attempt to become accounting software. It does,
-however, keep basic payment state with the job so the operational team
-can distinguish completed work from completed-and-paid work.
+A repair can be technically complete while payment is still outstanding. The operational team needs that distinction even if the system is not an accounting product.
 
-### Documentation is detached from the repair history
+### Documents are disconnected from service history
 
-Generated repair documents are more useful when they remain attached to
-the same job that contains the work, materials, technician, and warranty
-context.
+Repair documents are more useful when they remain attached to the same record as the customer, equipment, work, technician, and payment context.
 
-### Warranty follow-up depends on memory
+### Warranty follow-up depends on previous repair context
 
-When a customer returns with the same equipment, the business needs a
-reliable way to connect the new issue to the previous repair and its
-warranty period.
+When the same equipment returns, the team needs a reliable connection to earlier work and its warranty window.
 
 ## Product Solution
 
-Service Center Platform creates a shared operational record for each
-repair.
+Service Center Platform puts the repair lifecycle into one shared system.
 
-The platform connects:
-
-``` text
+```text
 Customer
    ↓
 Equipment
    ↓
 Repair Job
-   ├── Assignment
-   ├── Status
-   ├── Timeline
+   ├── Technician assignment
+   ├── Status & timeline
    ├── Photos
    ├── Materials
-   ├── Additional Work
+   ├── Additional work
    ├── Payment
    ├── Documents
-   └── Warranty Context
+   └── Warranty context
 ```
 
-This keeps operational context close to the job rather than splitting
-the workflow into unrelated modules.
+The platform is deliberately operational rather than ERP-like: it keeps the information required to execute and close repair work together without expanding into every adjacent business process.
 
-The product is deliberately narrower than an ERP. Its purpose is to make
-repair operations understandable and controllable with minimal overhead.
+## Why Repair Job Is the Central Entity
 
-## The Core Repair Job Concept
+The **Repair Job** is the product's central operational object.
 
-The **Repair Job** is the central product entity.
+Customer and equipment records provide identity and history, but the job is where daily execution happens. It connects:
 
-A job represents more than a task assigned to a technician. It is the
-record that carries the repair through its full lifecycle.
+- the customer;
+- the equipment;
+- the reported service need;
+- the assigned technician;
+- scheduling information;
+- current status and status history;
+- timeline activity;
+- photos and field context;
+- materials used;
+- additional work;
+- payment information;
+- generated documents;
+- warranty relationships.
 
-It connects:
+This means one object can answer both:
 
--   the customer;
--   the equipment being serviced;
--   the reported problem;
--   the assigned technician;
--   scheduling information;
--   current status and status history;
--   field notes and photos;
--   materials used;
--   additional work;
--   payment information;
--   generated documents;
--   warranty information;
--   the activity timeline.
+> What needs to happen next?
 
-This model creates one place to answer both "what needs to happen next?"
-and "what happened on this repair?"
+and:
 
-## Main User Workflow
+> What happened during this repair?
 
-``` text
-Request
+That job-centric model keeps the product focused on operational execution instead of becoming a broad CRM.
+
+## Main Workflow
+
+```text
+Customer
    ↓
-Create / select customer and equipment
+Repair Job
    ↓
-Create repair job
+Technician
    ↓
-Assign technician and scheduled time
+Diagnosis / Work
    ↓
-Technician performs diagnosis / work
+Additional Work
    ↓
-Record status, notes, photos and materials
+Payment
    ↓
-Capture additional work when needed
+Documents
    ↓
-Complete repair and record payment
-   ↓
-Generate job document
-   ↓
-Retain history for future warranty follow-up
+Warranty / Follow-up
 ```
 
-The workflow is intentionally linear at the product level while still
-allowing real service states such as waiting for approval, waiting for
-parts, cancellation, and warranty follow-up.
+In practice, the job retains the status and timeline context needed to represent non-linear real-world states such as pending additional work, cancellation, and warranty follow-up.
 
-## Important Product Decisions
+## Product Decisions Reflected in the Implementation
 
-### 1. Make the repair job the center of the product
+### 1. Use Repair Job as the operational source of context
 
-The implementation is job-centric rather than CRM-centric.
+The product is job-centric rather than customer-record-centric. Customer and equipment data exists to support the lifecycle of the work, while job pages and job state carry the operational process.
 
-Customer and equipment records matter because they provide context and
-history, but the operational unit the business needs to move forward
-every day is the job. This keeps the product focused on execution rather
-than building a broad customer-management suite.
+### 2. Keep both current status and history
 
-### 2. Preserve an activity timeline instead of relying only on current status
+A status tells the team where a job is now; the timeline provides the history behind that state. The implementation preserves job activity rather than treating the current status as the only useful information.
 
-A current status answers where the job is now. A timeline explains how
-it got there.
+### 3. Treat additional work as structured workflow data
 
-Keeping status changes and relevant activity as history makes the job
-useful for operational follow-up, handoffs, and later warranty
-questions.
+Additional work is modeled separately from free-form notes. That reflects a real operational handoff: diagnosis can reveal work that must be surfaced, decided on, and retained as part of the job.
 
-### 3. Model additional work explicitly
+### 4. Record materials without building warehouse management
 
-Additional work is not stored only as technician notes.
+Materials used during service belong to the repair record, so the MVP tracks them at job level. It intentionally does not expand this into stock levels, purchasing, warehouses, or inventory reconciliation.
 
-It has its own structured state because it represents a critical handoff
-between diagnosis, approval, and billing. This is one of the places
-where operational information can directly affect whether completed work
-is captured commercially.
+### 5. Keep payments operational and lightweight
 
-### 4. Track materials without building inventory management
+Payment information is attached to the repair lifecycle so completed-but-unpaid work remains visible. The product does not attempt to replace accounting or payment-processing software.
 
-Materials used on a job are operationally relevant, so they are recorded
-as job-level line items.
+### 6. Keep documents and photos outside the relational database
 
-The MVP intentionally stops there. It does not introduce warehouses,
-stock movements, purchasing, reorder logic, or inventory reconciliation.
-That keeps the scope aligned with service execution rather than ERP
-functionality.
+Binary files use S3-compatible object storage while structured application data remains in PostgreSQL. This keeps job relationships in the database without storing file payloads there.
 
-### 5. Keep payment tracking lightweight
+### 7. Choose simple background execution for the MVP
 
-Payment belongs in the job lifecycle because an operationally completed
-repair may still be unpaid.
-
-The MVP records payment information without trying to become a
-bookkeeping, invoicing, or payment-processing platform. This preserves
-visibility while avoiding a large adjacent product domain.
-
-### 6. Connect warranty logic to equipment history
-
-Warranty is treated as a continuation of repair history rather than a
-separate support module.
-
-When a new job is created for the same equipment within the relevant
-warranty window, the system can identify it as a potential warranty case
-and retain the connection to the original repair.
-
-### 7. Prefer a mobile-friendly web product over a native technician app
-
-Technicians need field access, but a native mobile application would add
-a separate product and engineering surface.
-
-The MVP uses the web application so the same system can support office
-and field workflows without introducing app-store distribution, native
-release cycles, or offline synchronization.
+PDF generation uses FastAPI `BackgroundTasks` rather than Redis and a dedicated worker queue. The current product does not require the infrastructure and retry guarantees of a distributed job system, so the implementation stays deliberately simple.
 
 ## MVP Scope
 
-The implemented MVP focuses on the operational repair lifecycle.
+Implemented scope includes:
 
-Included capabilities:
+- authentication and organization/user management;
+- customers;
+- equipment and repair history;
+- repair jobs and status transitions;
+- technician assignment and scheduling;
+- job timeline;
+- photos;
+- materials;
+- additional work;
+- payments;
+- PDF documents;
+- warranty/follow-up logic;
+- owner dashboard;
+- optional AI assistance already present in the backend;
+- Next.js frontend for the main operational workflows.
 
--   authentication and organization/user management;
--   customer records;
--   equipment records and repair history;
--   repair-job creation and lifecycle management;
--   technician assignment and scheduling;
--   status transitions and job timeline;
--   field photos and notes;
--   materials used;
--   additional-work tracking;
--   lightweight payment tracking;
--   PDF document generation;
--   warranty/follow-up logic;
--   owner dashboard;
--   optional AI assistance as a supporting layer;
--   a Next.js web interface for the main operational workflows.
+The repository's seed data demonstrates the lifecycle using the actual service layer.
 
-## Intentionally Excluded Functionality
+## Out of Scope
 
-The following areas are deliberately outside the MVP:
+The MVP intentionally does not include:
 
--   full accounting and bookkeeping;
--   a full invoicing engine;
--   warehouse and inventory management;
--   payroll and technician compensation calculation;
--   ERP-level reporting and multi-branch consolidation;
--   marketplace functionality;
--   native mobile applications;
--   customer self-service portal;
--   customer self-booking;
--   SLA and contract management;
--   complex integrations with accounting systems, payment gateways,
-    telephony, or external CRMs;
--   advanced autonomous AI agents.
+- full accounting/bookkeeping;
+- warehouse and inventory management;
+- payroll;
+- native mobile applications;
+- customer self-service or self-booking;
+- marketplace functionality;
+- ERP-level reporting;
+- complex external CRM/accounting/payment integrations;
+- distributed background-job infrastructure.
 
-These exclusions are product decisions, not missing pieces required to
-understand the current MVP. Each would substantially expand the problem
-space beyond repair operations.
+These are scope boundaries rather than claims about future roadmap.
 
 ## Current Limitations
 
-The current implementation should be understood as an MVP rather than a
-production-scale service platform.
+The implementation is an MVP and has deliberate constraints:
 
-Notable limitations include:
-
--   payment tracking is operational, not accounting-grade;
--   materials are logged per job but stock is not managed;
--   document generation runs as an in-process background task and does
-    not have queue-backed retry guarantees;
--   warranty checking does not rely on a dedicated production
-    scheduler/worker infrastructure;
--   login rate limiting is in-memory and therefore designed for the
-    current single-process MVP shape rather than distributed deployment;
--   the web application replaces a native technician app, so
-    native/offline mobile behavior is outside the current
-    implementation;
--   complex external integrations are intentionally absent.
+- payments provide operational visibility rather than accounting-grade functionality;
+- materials are recorded per job without stock management;
+- background PDF generation uses in-process `BackgroundTasks`, so it does not provide queue-backed retries;
+- the warranty check exists as backend logic but is not backed by a guaranteed external scheduler;
+- login rate limiting is in-memory and is therefore suited to the current single-process MVP rather than a distributed deployment;
+- the product uses a web frontend rather than a native/offline technician application;
+- complex third-party integrations are outside the current implementation.
 
 ## Product Metrics
 
-The current repository does **not** claim real business performance or
-production metrics. If the product were deployed and validated with real
-service businesses, the following metrics would be useful for evaluating
-whether it improves operations.
+The repository contains demo data, not validated production results. The following are metrics that would matter if the product were deployed with real service businesses; no actual values are claimed here.
 
-### Operational
+### Operational Metrics
 
--   **Average job completion time** --- time from job creation or
-    assignment to completion.
--   **Delayed jobs** --- jobs past their scheduled time that are not
-    completed.
--   **Jobs by status** --- distribution of work across the repair
-    lifecycle.
--   **Technician workload** --- assigned/active jobs by technician over
-    a selected period.
+- **Average job completion time** — how long jobs take to move from creation/assignment to completion.
+- **Delayed jobs** — jobs that have passed their scheduled time without completion.
+- **Jobs by status** — distribution of work across the operational lifecycle.
+- **Technician workload** — assigned and active jobs per technician.
 
-These metrics would indicate whether work is moving through the system
-predictably and whether operational bottlenecks are visible.
+These metrics indicate whether work is moving predictably and where operational bottlenecks appear.
 
-### Revenue
+### Revenue Metrics
 
--   **Average job value** --- average recorded value of completed jobs.
--   **Additional-work conversion** --- share of proposed additional work
-    that is approved/billed.
--   **Unpaid jobs** --- completed work that still has outstanding
-    payment.
--   **Revenue by technician / service type** --- useful for
-    understanding the commercial mix of completed work where the
-    underlying data is available.
+- **Average job value** — average recorded value of completed work.
+- **Additional-work conversion** — share of proposed additional work that is approved.
+- **Unpaid jobs** — completed work with outstanding payment.
+- **Revenue by technician / service type** — commercial mix of completed work where the required underlying data is available.
 
-These are product-relevant operational revenue metrics, not a
-replacement for accounting.
+These are operational revenue signals, not a substitute for accounting.
 
-### Customer
+### Customer Metrics
 
--   **Repeat customers** --- customers with more than one repair
-    relationship over time.
--   **Warranty claims** --- volume and share of jobs identified as
-    warranty follow-ups.
--   **Customer return rate** --- share of customers who return for
-    another service job over a defined period.
+- **Repeat customers** — customers with multiple service relationships over time.
+- **Warranty claims** — volume/share of jobs linked to warranty follow-up.
+- **Customer return rate** — customers returning for another service job within a defined period.
 
-These metrics would help evaluate whether the stored customer/equipment
-history becomes useful beyond a single repair.
-
-No actual values are included here because the repository contains demo
-data rather than validated production usage.
+These metrics would help test whether retained customer/equipment history creates value beyond a single repair.
 
 ## Demo Scenario
 
-The seed script demonstrates multiple job states through the real
-service layer rather than presenting a single idealized happy path.
+The seed script demonstrates several job states rather than only a happy-path repair:
 
-It includes examples of:
+- new work;
+- active work;
+- pending additional work;
+- completed and paid work with a generated PDF;
+- same-equipment warranty follow-up;
+- cancelled work.
 
--   new work;
--   work already in progress;
--   pending additional work;
--   a completed and paid repair with a generated PDF;
--   a same-equipment follow-up that can be recognized as a warranty
-    case;
--   a cancelled repair.
-
-This makes the repository useful as a product demonstration without
-implying real customers or business traction.
-
-## Product Principle
-
-The MVP follows a simple scope rule:
-
-> A feature belongs in the core product when it helps the business
-> understand, execute, or close a repair job with less operational
-> ambiguity.
-
-That is why customer history, assignments, additional work, payment
-state, documents, and warranty context are included --- while full
-accounting, inventory, payroll, marketplace functionality, and complex
-integrations are not.
+The scenario is designed to make the product lifecycle inspectable locally. It does not represent real customers, revenue, traction, or business performance.
