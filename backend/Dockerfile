@@ -2,9 +2,7 @@ FROM python:3.13-slim
 
 WORKDIR /code
 
-# System deps kept minimal for Milestone 0. Revisit if a later milestone
-# needs something extra (e.g. wkhtmltopdf / weasyprint system libs for
-# Milestone 14's PDF generation).
+# Keep system dependencies minimal for the current application requirements.
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 

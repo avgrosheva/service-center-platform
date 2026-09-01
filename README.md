@@ -70,13 +70,16 @@ The job timeline keeps the operational history visible as the repair moves throu
 - **Documents** — generate PDF documents and store them with the repair record.
 - **Warranty** — connect follow-up work to previous equipment repairs and warranty context.
 - **Dashboard** — owner-level operational visibility across service activity.
-- **Optional AI assistance** — the backend includes an optional AI-assist layer; it supports the workflow rather than replacing operational decisions.
+- **Optional AI assistance** — the backend includes an optional AI-assist layer that supports the workflow without replacing operational decisions.
 
 ## Demo / Seed Data
 
-The repository includes demo data that exercises different real-world job states through the application's service layer.
+The repository includes demo data that exercises different repair-job states through the application's service layer.
+
+From the repository root:
 
 ```bash
+cd backend
 python -m app.seed_demo_data
 ```
 
@@ -110,7 +113,7 @@ FastAPI routers handle HTTP concerns, services contain business logic, and SQLAl
 
 PDF generation uses FastAPI `BackgroundTasks`. The MVP deliberately avoids Redis and a separate worker process because the current background workload does not require durable queues or distributed retry guarantees.
 
-See [docs/architecture.md](docs/architecture.md) for the concise technical overview and [docs/product-case-study.md](docs/product-case-study.md) for the product reasoning behind the MVP.
+See [docs/architecture.md](docs/architecture.md) for the technical overview and [docs/product-case-study.md](docs/product-case-study.md) for the product reasoning behind the MVP.
 
 ## Tech Stack
 
@@ -126,36 +129,39 @@ See [docs/architecture.md](docs/architecture.md) for the concise technical overv
 
 ```text
 service-center-platform/
-├── app/                       # FastAPI backend
-│   ├── core/                  # Security, exceptions, rate limiting
-│   ├── documents/             # PDF generation
-│   ├── models/                # SQLAlchemy models
-│   ├── routers/               # HTTP/API layer
-│   ├── schemas/               # Pydantic schemas
-│   ├── services/              # Business logic
-│   ├── storage/               # S3-compatible storage integration
-│   ├── workers/               # Background task functions
-│   ├── config.py
-│   ├── database.py
-│   ├── main.py
-│   └── seed_demo_data.py
-├── frontend/                  # Next.js frontend
-│   ├── app/                   # App Router pages and API routes
-│   ├── components/            # Feature and UI components
-│   ├── lib/                   # API/auth/session helpers
+├── backend/                    # FastAPI backend
+│   ├── app/
+│   │   ├── core/              # Security, exceptions, rate limiting
+│   │   ├── documents/         # PDF generation
+│   │   ├── models/            # SQLAlchemy models
+│   │   ├── routers/           # HTTP/API layer
+│   │   ├── schemas/           # Pydantic schemas
+│   │   ├── services/          # Business logic
+│   │   ├── storage/           # S3-compatible storage integration
+│   │   ├── workers/           # Background task functions
+│   │   ├── config.py
+│   │   ├── database.py
+│   │   ├── main.py
+│   │   └── seed_demo_data.py
+│   ├── alembic/               # Database migrations
+│   ├── tests/                 # Backend test suite
+│   ├── .env.example           # Backend environment template
+│   ├── Dockerfile             # Backend image
+│   ├── alembic.ini
+│   ├── pytest.ini
+│   └── requirements.txt
+├── frontend/                   # Next.js frontend
+│   ├── app/                    # App Router pages and API routes
+│   ├── components/             # Feature and UI components
+│   ├── lib/                    # API/auth/session helpers
 │   ├── public/
 │   ├── types/
 │   ├── .env.local.example
 │   └── package.json
-├── alembic/                   # Database migrations
-├── tests/                     # Backend test suite
-├── docs/                      # Product and architecture documentation
-├── .env.example               # Backend environment template
-├── Dockerfile                 # Backend image
-├── docker-compose.yml         # Backend + PostgreSQL + MinIO
-├── alembic.ini
-├── pytest.ini
-└── requirements.txt
+├── docs/                       # Product and architecture documentation
+├── docker-compose.yml          # Backend + PostgreSQL + MinIO
+├── .gitignore
+└── README.md
 ```
 
 ## Local Setup
@@ -176,23 +182,23 @@ git clone https://github.com/avgrosheva/service-center-platform.git
 cd service-center-platform
 ```
 
-### 2. Start the backend infrastructure
+### 2. Configure and Start the Backend Stack
 
-Copy the backend environment template:
+Copy the backend environment template.
 
 **macOS / Linux**
 
 ```bash
-cp .env.example .env
+cp backend/.env.example backend/.env
 ```
 
 **Windows PowerShell**
 
 ```powershell
-Copy-Item .env.example .env
+Copy-Item backend/.env.example backend/.env
 ```
 
-Start FastAPI, PostgreSQL, and MinIO:
+Start FastAPI, PostgreSQL, and MinIO from the repository root:
 
 ```bash
 docker compose up --build
@@ -231,7 +237,7 @@ To also reset persisted PostgreSQL and MinIO data:
 docker compose down -v
 ```
 
-### 3. Start the frontend
+### 3. Start the Frontend
 
 In a second terminal:
 
@@ -240,7 +246,7 @@ cd frontend
 npm install
 ```
 
-Create the frontend environment file:
+Create the frontend environment file.
 
 **macOS / Linux**
 
@@ -274,11 +280,13 @@ http://localhost:3000
 
 The frontend API client prefixes requests with `/api/v1` on top of `NEXT_PUBLIC_API_BASE_URL`.
 
-### Backend without Docker
+### Backend Without Docker
 
-On Windows / PowerShell:
+From the repository root:
 
 ```powershell
+cd backend
+
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
@@ -286,7 +294,7 @@ pip install -r requirements.txt
 Copy-Item .env.example .env
 ```
 
-Set `DATABASE_URL` in `.env` to a local PostgreSQL instance, for example:
+Set `DATABASE_URL` in `backend/.env` to a local PostgreSQL instance, for example:
 
 ```env
 DATABASE_URL=postgresql+asyncpg://fsp:dev_password_change_me@localhost:5432/field_service
@@ -304,17 +312,21 @@ Check:
 Invoke-RestMethod http://localhost:8000/health
 ```
 
-### Database migrations
+### Database Migrations
+
+Run migrations from `backend/`:
 
 ```bash
+cd backend
 alembic upgrade head
 ```
 
-### Tests and frontend checks
+### Tests and Frontend Checks
 
 Backend:
 
 ```bash
+cd backend
 pytest
 ```
 

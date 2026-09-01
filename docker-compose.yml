@@ -41,11 +41,11 @@ services:
 
   app:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile
     restart: unless-stopped
     env_file:
-      - .env
+      - ./backend/.env
     environment:
       # Overrides .env's DATABASE_URL/S3_ENDPOINT_URL hosts so the app
       # container reaches its dependencies by their service name rather
@@ -55,7 +55,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./app:/code/app
+      - ./backend/app:/code/app
     depends_on:
       db:
         condition: service_healthy
