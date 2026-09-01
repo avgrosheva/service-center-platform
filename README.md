@@ -1,297 +1,352 @@
-# Field Service Platform
+# Service Center Platform
 
-Full-stack MVP for managing field-service and repair operations: customers, equipment, repair jobs, technician assignments, job lifecycle, materials, additional work, payments, documents, warranty cases, scheduling, and operational dashboards.
+A lightweight operational platform for small field-service and repair
+companies.
 
-The repository contains both the **FastAPI backend** and the **Next.js web application**.
+Service Center Platform keeps the full repair lifecycle in one place ---
+from the first customer request through technician work, payment,
+documentation, and warranty follow-up.
 
-## Features
+> **Core concept:** Customer → Repair Job → Technician → Work → Payment
+> → Documents → Warranty
 
-### Operations
+## The Problem
 
-- Customer management
-- Equipment registry and equipment history
-- Repair/service job creation and tracking
-- Technician assignment
-- Job status lifecycle and timeline
-- Schedule view for field work
-- Materials and additional-work tracking
-- Payment tracking
-- PDF document generation
-- Warranty/follow-up job logic
-- Owner/operations dashboard
-- Organization and user management
-- Optional AI-assist layer
+Small repair businesses often run operations across chat threads,
+spreadsheets, paper notes, and individual employees' memory. That makes
+even basic operational questions difficult to answer reliably.
 
-### Web Application
+Typical problems include:
 
-- Authentication and registration flows
-- Protected application area
-- Dashboard
-- Jobs list, job creation, and job details
-- Customers list, customer creation, and customer details
-- Equipment details
-- Schedule
-- Settings
-- Responsive component-based UI
-- Typed API integration with the backend
+-   customer and equipment history scattered across different places;
+-   unclear job status and jobs slipping through the cracks;
+-   technician assignments without a shared operational view;
+-   additional work discovered on-site not being consistently tracked or
+    billed;
+-   materials and payment information separated from the job itself;
+-   repair documents being created manually or not retained with the
+    service history;
+-   warranty follow-ups depending on memory instead of a structured
+    record.
 
----
+## The Solution
+
+Service Center Platform treats the **Repair Job** as the central
+operational record.
+
+Instead of splitting information across separate tools, each job
+connects the customer, equipment, assigned technician, status history,
+field activity, photos, materials, additional work, payment, generated
+documents, and warranty context.
+
+The goal is not to replace a full ERP or accounting system. It is to
+provide a focused operational workspace for the workflow a service
+company manages every day.
+
+## Core Workflow
+
+``` text
+Request
+   ↓
+Job
+   ↓
+Assignment
+   ↓
+Diagnosis / Work
+   ↓
+Additional Work
+   ↓
+Payment
+   ↓
+Documents
+   ↓
+Warranty
+```
+
+The job timeline preserves the operational history as the repair moves
+through this lifecycle.
+
+## Key Capabilities
+
+-   **Customer management** --- customer records connected to equipment
+    and repair history.
+-   **Equipment** --- equipment records linked to customers and previous
+    jobs.
+-   **Repair jobs** --- the central entity for service operations.
+-   **Technician assignment** --- assign work and scheduled time to
+    technicians.
+-   **Status transitions** --- move jobs through their operational
+    lifecycle.
+-   **Job timeline** --- retain a chronological activity history for
+    each job.
+-   **Photos** --- attach field photos to repair jobs.
+-   **Materials** --- record materials and parts used without
+    introducing full inventory management.
+-   **Additional work** --- track work discovered during a repair,
+    including approval/billing state.
+-   **Payments** --- lightweight payment records linked directly to
+    jobs.
+-   **PDF documents** --- generate job-related PDF documents and store
+    them with the repair record.
+-   **Warranty logic** --- identify follow-up jobs for the same
+    equipment that may fall within the original warranty period.
+-   **Owner dashboard** --- operational visibility across active jobs,
+    delayed work, payments, and other job-level signals.
+-   **Optional AI assistance** --- an assistive layer in the existing
+    MVP; it is not the core workflow and does not replace operational
+    decisions.
+
+## Demo Scenario
+
+The repository includes seed data designed to demonstrate the product
+across different real-world job states.
+
+The demo covers:
+
+-   a newly created job;
+-   an active job already moving through the workflow;
+-   a job with pending additional work;
+-   a completed and paid job with a generated PDF document;
+-   a follow-up job that is identified as a potential warranty case;
+-   a cancelled job.
+
+The seed data is intended to make the lifecycle easy to inspect locally.
+It does not represent real customers, revenue, or production usage.
+
+Run it with:
+
+``` bash
+python -m app.seed_demo_data
+```
+
+A running, migrated PostgreSQL database is required. MinIO must also be
+running for the generated document used in the demo.
+
+> The seed command is not idempotent. Each run creates a new demo
+> organization.
+
+## Architecture
+
+The application deliberately uses a straightforward full-stack
+architecture:
+
+``` text
+Next.js
+   ↓
+FastAPI
+   ↓
+Service Layer
+   ↓
+PostgreSQL
+
+Documents / Photos
+   ↓
+S3-compatible storage
+```
+
+Backend business logic follows:
+
+``` text
+Router → Service → SQLAlchemy
+```
+
+FastAPI routers handle the HTTP layer, services contain business logic,
+and SQLAlchemy provides persistence. Binary files such as photos and
+generated PDFs are stored in S3-compatible object storage while their
+application metadata remains in PostgreSQL.
+
+Background document generation uses FastAPI `BackgroundTasks`. The MVP
+intentionally avoids Redis and a separate worker process because the
+current workload does not require the additional operational complexity
+or retry guarantees of a dedicated queue.
+
+For more detail, see [docs/architecture.md](docs/architecture.md).
+
+For the product reasoning behind the MVP, see
+[docs/product-case-study.md](docs/product-case-study.md).
 
 ## Tech Stack
 
-### Backend
-
-- Python 3.13
-- FastAPI
-- PostgreSQL 16
-- SQLAlchemy Async
-- Alembic
-- Pydantic v2 / pydantic-settings
-- asyncpg
-- S3-compatible object storage via MinIO for local development
-- FastAPI `BackgroundTasks`
-- Pytest
-
-Backend architecture follows a layered approach:
-
-```text
-Router -> Service -> SQLAlchemy
-```
-
 ### Frontend
 
-- Next.js 16
-- React 19
-- TypeScript
-- Tailwind CSS 4
-- shadcn
-- Base UI
-- Lucide React
-- ESLint
-- Prettier
+-   Next.js 16
+-   React 19
+-   TypeScript
+-   Tailwind CSS 4
+-   shadcn / Base UI
 
----
+### Backend
+
+-   Python 3.13
+-   FastAPI
+-   PostgreSQL 16
+-   SQLAlchemy Async
+-   Alembic
+-   Pydantic v2
+-   asyncpg
+-   Pytest
+
+### Storage & Local Infrastructure
+
+-   S3-compatible object storage
+-   MinIO for local development
+-   Docker Compose
 
 ## Repository Structure
 
-```text
+``` text
 service-center-platform/
-├── app/                       # Backend application
-│   ├── main.py                # FastAPI application
-│   ├── config.py              # Environment/settings configuration
-│   ├── models/                # SQLAlchemy ORM models
-│   ├── schemas/               # Pydantic request/response schemas
-│   ├── routers/               # HTTP/API layer
-│   ├── services/              # Business logic
-│   ├── storage/               # S3-compatible storage integration
-│   ├── documents/             # PDF generation
-│   ├── workers/               # Background tasks
-│   └── core/                  # Security, exceptions, rate limiting, etc.
+├── app/                       # FastAPI backend
+│   ├── core/
+│   ├── documents/
+│   ├── models/
+│   ├── routers/
+│   ├── schemas/
+│   ├── services/
+│   ├── storage/
+│   ├── workers/
+│   ├── config.py
+│   ├── database.py
+│   ├── main.py
+│   └── seed_demo_data.py
 ├── alembic/                   # Database migrations
-├── docs/                      # Project/backend documentation
+├── docs/                      # Product and technical documentation
+├── frontend/                  # Next.js frontend
 ├── tests/                     # Backend tests
-├── frontend/
-│   ├── app/                   # Next.js App Router pages
-│   │   ├── (authenticated)/   # Protected application routes
-│   │   │   ├── customers/
-│   │   │   ├── dashboard/
-│   │   │   ├── equipment/
-│   │   │   ├── jobs/
-│   │   │   ├── schedule/
-│   │   │   └── settings/
-│   │   ├── api/
-│   │   ├── login/
-│   │   └── register/
-│   ├── components/            # UI and feature components
-│   │   ├── auth/
-│   │   ├── customers/
-│   │   ├── equipment/
-│   │   ├── jobs/
-│   │   ├── shell/
-│   │   └── ui/
-│   ├── lib/                   # API client, auth/session helpers, utilities
-│   ├── types/                 # Frontend TypeScript types
-│   └── public/                # Static assets
-├── .env.example               # Backend environment template
-├── docker-compose.yml         # Backend + PostgreSQL + MinIO
-├── Dockerfile                 # Backend container
-├── requirements.txt           # Python dependencies
-└── README.md
+├── .env.example
+├── docker-compose.yml
+├── Dockerfile
+└── requirements.txt
 ```
 
----
-
-## Getting Started
+## Local Setup
 
 ### Prerequisites
 
-For the recommended setup:
+Recommended setup:
 
-- Docker Desktop
-- Node.js and npm
+-   Docker Desktop
+-   Node.js and npm
 
-For running the backend without Docker:
+Running the backend without Docker additionally requires:
 
-- Python 3.13
-- PostgreSQL
+-   Python 3.13
+-   PostgreSQL
 
----
+### 1. Clone the repository
 
-## 1. Clone the Repository
-
-```bash
+``` bash
 git clone https://github.com/avgrosheva/service-center-platform.git
 cd service-center-platform
 ```
 
----
-
-## 2. Start the Backend
-
-Docker Compose is the recommended way to run the backend and its infrastructure.
+### 2. Start the backend with Docker Compose
 
 Copy the backend environment template.
 
-### macOS / Linux
+macOS / Linux:
 
-```bash
+``` bash
 cp .env.example .env
 ```
 
-### Windows PowerShell
+Windows PowerShell:
 
-```powershell
+``` powershell
 Copy-Item .env.example .env
 ```
 
-Then start the stack:
+Start the backend, PostgreSQL, and MinIO:
 
-```bash
+``` bash
 docker compose up --build
 ```
 
-This starts:
+Local services:
 
-| Service | Address | Purpose |
-|---|---|---|
-| FastAPI | `http://localhost:8000` | Backend API |
-| PostgreSQL | `localhost:5433` | Application database |
-| MinIO API | `http://localhost:9000` | S3-compatible object storage |
-| MinIO Console | `http://localhost:9001` | Local storage administration |
+  Service         Address
+  --------------- -------------------------
+  FastAPI         `http://localhost:8000`
+  PostgreSQL      `localhost:5433`
+  MinIO API       `http://localhost:9000`
+  MinIO Console   `http://localhost:9001`
 
 Check backend health:
 
-```bash
+``` bash
 curl http://localhost:8000/health
 ```
 
 Expected response:
 
-```json
+``` json
 {
   "status": "ok",
   "database": "connected"
 }
 ```
 
-PostgreSQL data is persisted in the `fsp_postgres_data` Docker volume and MinIO data in `fsp_minio_data`.
+PostgreSQL data is persisted in the `fsp_postgres_data` volume and MinIO
+data in `fsp_minio_data`.
 
-To stop the stack:
+Stop the stack:
 
-```bash
+``` bash
 docker compose down
 ```
 
-To stop it and delete persisted local data:
+Reset persisted local data:
 
-```bash
+``` bash
 docker compose down -v
 ```
 
----
-
-## 3. Start the Frontend
+### 3. Start the frontend
 
 Open another terminal:
 
-```bash
+``` bash
 cd frontend
 npm install
 ```
 
 Create the frontend environment file.
 
-### macOS / Linux
+macOS / Linux:
 
-```bash
+``` bash
 cp .env.local.example .env.local
 ```
 
-### Windows PowerShell
+Windows PowerShell:
 
-```powershell
+``` powershell
 Copy-Item .env.local.example .env.local
 ```
 
-The default development configuration points the frontend to the local backend:
+For local development, point the frontend to the backend:
 
-```env
+``` env
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 ```
 
-Start the development server:
+Start Next.js:
 
-```bash
+``` bash
 npm run dev
 ```
 
 Open:
 
-```text
+``` text
 http://localhost:3000
 ```
 
-The frontend API client uses `NEXT_PUBLIC_API_BASE_URL` as the backend base URL and calls the backend under `/api/v1`.
+### Run the backend without Docker
 
----
+For a native Windows / PowerShell setup:
 
-## Quick Start
-
-Once the repository has been cloned, the normal local-development workflow is:
-
-### Terminal 1 — Backend
-
-```bash
-cp .env.example .env
-docker compose up --build
-```
-
-### Terminal 2 — Frontend
-
-```bash
-cd frontend
-npm install
-cp .env.local.example .env.local
-npm run dev
-```
-
-Then open:
-
-```text
-http://localhost:3000
-```
-
-> On Windows PowerShell, use `Copy-Item` instead of `cp` if needed.
-
----
-
-## Backend: Local Run Without Docker
-
-If you want to run FastAPI directly on your machine, you need Python 3.13 and a local PostgreSQL instance.
-
-### Windows / PowerShell
-
-```powershell
+``` powershell
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
@@ -299,336 +354,59 @@ pip install -r requirements.txt
 Copy-Item .env.example .env
 ```
 
-Update `DATABASE_URL` in `.env` to point to your local PostgreSQL instance.
+Update `DATABASE_URL` in `.env` to point to your local PostgreSQL
+instance. For example:
 
-For example:
-
-```env
+``` env
 DATABASE_URL=postgresql+asyncpg://fsp:dev_password_change_me@localhost:5432/field_service
 ```
 
-Create the `field_service` database and `fsp` user in PostgreSQL, then start the API:
+Create the `field_service` database and `fsp` user, then run:
 
-```powershell
+``` powershell
 uvicorn app.main:app --reload
 ```
 
 Check:
 
-```powershell
+``` powershell
 Invoke-RestMethod http://localhost:8000/health
 ```
 
----
-
 ## Database Migrations
 
-The project uses Alembic for database migrations.
+Apply migrations with Alembic:
 
-Apply migrations with:
-
-```bash
+``` bash
 alembic upgrade head
 ```
 
-When the backend is running in Docker, run Alembic in the appropriate backend environment/container if migrations are not already applied by your development workflow.
+## Tests
 
----
+Run backend tests with:
 
-## Demo Data
-
-With PostgreSQL migrated and MinIO running:
-
-```bash
-python -m app.seed_demo_data
-```
-
-The seed script creates a demonstration organization with:
-
-- an owner
-- a dispatcher
-- two technicians
-- three customers with equipment
-- five jobs covering different lifecycle states
-
-The sample jobs include new and in-progress work, pending additional work, a completed paid job with a generated PDF document, a warranty follow-up, and a cancelled job.
-
-The script prints demo login credentials and dashboard values when it finishes.
-
-> The seed command is not idempotent. Running it multiple times creates additional demo organizations.
-
----
-
-## Authentication and Access
-
-The application includes authentication plus organization/user management.
-
-The frontend contains public login and registration routes and keeps operational pages under the authenticated application layout.
-
-The backend's login endpoint is rate-limited to **5 attempts per 60 seconds per client IP** for the MVP.
-
-API error responses use a consistent shape:
-
-```json
-{
-  "detail": "Error message"
-}
-```
-
----
-
-## Main Frontend Routes
-
-```text
-/login
-/register
-/dashboard
-/jobs
-/jobs/new
-/jobs/[id]
-/customers
-/customers/new
-/customers/[id]
-/equipment/[id]
-/schedule
-/settings
-```
-
----
-
-## Frontend Development Commands
-
-Run these from `frontend/`.
-
-### Development Server
-
-```bash
-npm run dev
-```
-
-Starts the Next.js development server.
-
-### Production Build
-
-```bash
-npm run build
-```
-
-Creates a production build.
-
-### Production Server
-
-```bash
-npm run start
-```
-
-Starts the production Next.js server after a build.
-
-### Linting
-
-```bash
-npm run lint
-```
-
-Runs ESLint.
-
-### Type Checking
-
-```bash
-npm run typecheck
-```
-
-Runs the TypeScript compiler without emitting files.
-
-### Formatting
-
-```bash
-npm run format
-```
-
-Formats frontend files with Prettier.
-
-### Formatting Check
-
-```bash
-npm run format:check
-```
-
-Checks formatting without modifying files.
-
----
-
-## Backend Tests
-
-Run:
-
-```bash
+``` bash
 pytest
 ```
 
-The fast unit tests mock database connectivity where appropriate.
+Frontend quality checks are available from `frontend/`:
 
-Real PostgreSQL connectivity can be checked separately through the Docker Compose stack and `/health` endpoint.
-
----
-
-## Background Tasks
-
-The MVP currently uses FastAPI `BackgroundTasks` rather than a separate Redis-backed worker system.
-
-Current background-task functionality includes:
-
-- PDF document generation and S3 upload
-- warranty-check task logic
-
-Document generation opens its own database session, generates the PDF, uploads it to S3-compatible storage, and persists the resulting document/timeline data.
-
-For a larger production deployment, a dedicated queue such as Redis + arq can replace the current approach when reliable retries or guaranteed scheduled execution become necessary.
-
----
-
-## Object Storage
-
-Local development uses MinIO as an S3-compatible object store.
-
-The backend accesses object storage through an S3 client abstraction, allowing the local MinIO setup to be replaced by another S3-compatible provider in deployment through configuration.
-
-Docker Compose exposes:
-
-```text
-MinIO API:     http://localhost:9000
-MinIO Console: http://localhost:9001
+``` bash
+npm run lint
+npm run typecheck
+npm run format:check
+npm run build
 ```
 
----
+## Project Scope
 
-## Environment Configuration
+Service Center Platform is intentionally an MVP-sized operational
+product.
 
-Backend configuration starts from:
+It focuses on the repair-job lifecycle rather than becoming a
+general-purpose ERP. Full accounting, warehouse inventory, payroll,
+native mobile apps, customer self-service, complex integrations, and
+other larger platform capabilities are outside the current MVP scope.
 
-```text
-.env.example
-```
-
-Frontend configuration starts from:
-
-```text
-frontend/.env.local.example
-```
-
-For frontend development, the main variable is:
-
-```env
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
-```
-
-Do not commit real secrets or local `.env` files.
-
----
-
-## Architecture
-
-At a high level:
-
-```text
-Browser
-   |
-   v
-Next.js / React frontend
-   |
-   | HTTP / JSON
-   v
-FastAPI routers
-   |
-   v
-Service layer
-   |
-   +--------------------+
-   |                    |
-   v                    v
-PostgreSQL          S3-compatible storage
-(SQLAlchemy)            (MinIO locally)
-```
-
-The backend keeps HTTP concerns in routers and business logic in services. Persistence is handled through asynchronous SQLAlchemy models and sessions.
-
-The frontend is organized around Next.js App Router routes, reusable feature components, shared UI components, typed API access, and authentication/session helpers.
-
----
-
-## Core Domain Flow
-
-A typical service operation can move through the platform roughly as follows:
-
-```text
-Customer
-   |
-   v
-Equipment
-   |
-   v
-Service / Repair Job
-   |
-   +--> Technician assignment
-   +--> Status transitions
-   +--> Timeline
-   +--> Photos / materials
-   +--> Additional work
-   +--> Payment
-   +--> PDF documents
-   +--> Warranty / follow-up
-```
-
-The dashboard and schedule provide operational views over these domain records.
-
----
-
-## Production Notes
-
-The current repository is an MVP-oriented implementation.
-
-Before a production deployment, review at least:
-
-- production secrets and environment management
-- CORS/origin configuration
-- HTTPS and reverse proxy configuration
-- database backups
-- production object storage
-- persistent application logging and monitoring
-- multi-process implications for in-memory rate limiting
-- reliable background-job processing if retries become required
-- frontend and backend deployment configuration
-
----
-
-## Project Status
-
-The backend implements the MVP scope described by the project's implementation roadmap, including:
-
-- authentication
-- organization and user management
-- customers
-- equipment
-- repair jobs
-- assignments
-- lifecycle and timeline
-- materials
-- additional work
-- payments
-- documents
-- warranty logic
-- dashboard functionality
-- optional AI assistance
-- backend hardening
-
-The repository also contains the working **Next.js frontend** for the main user workflows.
-
-The project should therefore be treated as a **full-stack application** rather than a backend-only service.
-
----
-
-## License
-
-No license file is currently documented in this repository.
-
-Add a `LICENSE` file and update this section if the project is going to be distributed publicly under a specific license.
+See [docs/product-case-study.md](docs/product-case-study.md) for the
+product decisions and scope boundaries.
