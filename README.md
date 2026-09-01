@@ -1,51 +1,295 @@
-# Field Service Platform — Backend
+# Field Service Platform
 
-Field service repair operations MVP backend. FastAPI + PostgreSQL + SQLAlchemy Async + Alembic + Pydantic v2, Router → Service → SQLAlchemy architecture.
+Full-stack MVP for managing field-service and repair operations: customers, equipment, repair jobs, technician assignments, job lifecycle, materials, additional work, payments, documents, warranty cases, scheduling, and operational dashboards.
 
-Covers Milestones 0–19 of the implementation roadmap — the full backend MVP described in the Product Definition and Technical Blueprint: auth, org/user management, customers, equipment, the repair-job lifecycle (assignment, status transitions, timeline), photos/materials/additional work, payments, PDF documents, warranty logic, the owner dashboard, an optional AI-assist layer, and the hardening pass (rate limiting, centralized error handling, seed data) covered below. The run instructions haven't changed since Milestone 0.
+The repository contains both the **FastAPI backend** and the **Next.js web application**.
 
-## Project structure
+## Features
 
+### Operations
+
+- Customer management
+- Equipment registry and equipment history
+- Repair/service job creation and tracking
+- Technician assignment
+- Job status lifecycle and timeline
+- Schedule view for field work
+- Materials and additional-work tracking
+- Payment tracking
+- PDF document generation
+- Warranty/follow-up job logic
+- Owner/operations dashboard
+- Organization and user management
+- Optional AI-assist layer
+
+### Web Application
+
+- Authentication and registration flows
+- Protected application area
+- Dashboard
+- Jobs list, job creation, and job details
+- Customers list, customer creation, and customer details
+- Equipment details
+- Schedule
+- Settings
+- Responsive component-based UI
+- Typed API integration with the backend
+
+---
+
+## Tech Stack
+
+### Backend
+
+- Python 3.13
+- FastAPI
+- PostgreSQL 16
+- SQLAlchemy Async
+- Alembic
+- Pydantic v2 / pydantic-settings
+- asyncpg
+- S3-compatible object storage via MinIO for local development
+- FastAPI `BackgroundTasks`
+- Pytest
+
+Backend architecture follows a layered approach:
+
+```text
+Router -> Service -> SQLAlchemy
 ```
-app/
-├── main.py          # App instantiation + /health (Milestone 0), now config-driven (Milestone 1)
-├── config.py         # Centralized settings, pydantic-settings, fail-fast on missing required vars (Milestone 1)
-├── models/           # SQLAlchemy ORM models (from Milestone 3)
-├── schemas/          # Pydantic v2 request/response models (from Milestone 3)
-├── routers/          # HTTP layer — thin, delegates to services (from Milestone 4)
-├── services/         # Business logic (from Milestone 4)
-├── storage/          # S3 client wrapper (from Milestone 10)
-├── documents/         # PDF generation (from Milestone 14)
-├── workers/          # Background task functions (from Milestone 14)
-└── core/             # security.py, exceptions.py (from Milestone 4)
 
-alembic/               # Migrations (from Milestone 2)
-tests/                 # Test suite
+### Frontend
+
+- Next.js 16
+- React 19
+- TypeScript
+- Tailwind CSS 4
+- shadcn
+- Base UI
+- Lucide React
+- ESLint
+- Prettier
+
+---
+
+## Repository Structure
+
+```text
+service-center-platform/
+├── app/                       # Backend application
+│   ├── main.py                # FastAPI application
+│   ├── config.py              # Environment/settings configuration
+│   ├── models/                # SQLAlchemy ORM models
+│   ├── schemas/               # Pydantic request/response schemas
+│   ├── routers/               # HTTP/API layer
+│   ├── services/              # Business logic
+│   ├── storage/               # S3-compatible storage integration
+│   ├── documents/             # PDF generation
+│   ├── workers/               # Background tasks
+│   └── core/                  # Security, exceptions, rate limiting, etc.
+├── alembic/                   # Database migrations
+├── docs/                      # Project/backend documentation
+├── tests/                     # Backend tests
+├── frontend/
+│   ├── app/                   # Next.js App Router pages
+│   │   ├── (authenticated)/   # Protected application routes
+│   │   │   ├── customers/
+│   │   │   ├── dashboard/
+│   │   │   ├── equipment/
+│   │   │   ├── jobs/
+│   │   │   ├── schedule/
+│   │   │   └── settings/
+│   │   ├── api/
+│   │   ├── login/
+│   │   └── register/
+│   ├── components/            # UI and feature components
+│   │   ├── auth/
+│   │   ├── customers/
+│   │   ├── equipment/
+│   │   ├── jobs/
+│   │   ├── shell/
+│   │   └── ui/
+│   ├── lib/                   # API client, auth/session helpers, utilities
+│   ├── types/                 # Frontend TypeScript types
+│   └── public/                # Static assets
+├── .env.example               # Backend environment template
+├── docker-compose.yml         # Backend + PostgreSQL + MinIO
+├── Dockerfile                 # Backend container
+├── requirements.txt           # Python dependencies
+└── README.md
 ```
 
-Empty package directories are scaffolded now, per the Technical Blueprint, and filled in as their corresponding milestone is implemented.
+---
 
-## Option A — Run with Docker Compose (recommended)
+## Getting Started
 
-Requires Docker Desktop.
+### Prerequisites
+
+For the recommended setup:
+
+- Docker Desktop
+- Node.js and npm
+
+For running the backend without Docker:
+
+- Python 3.13
+- PostgreSQL
+
+---
+
+## 1. Clone the Repository
+
+```bash
+git clone https://github.com/avgrosheva/service-center-platform.git
+cd service-center-platform
+```
+
+---
+
+## 2. Start the Backend
+
+Docker Compose is the recommended way to run the backend and its infrastructure.
+
+Copy the backend environment template.
+
+### macOS / Linux
+
+```bash
+cp .env.example .env
+```
+
+### Windows PowerShell
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Then start the stack:
+
+```bash
+docker compose up --build
+```
+
+This starts:
+
+| Service | Address | Purpose |
+|---|---|---|
+| FastAPI | `http://localhost:8000` | Backend API |
+| PostgreSQL | `localhost:5433` | Application database |
+| MinIO API | `http://localhost:9000` | S3-compatible object storage |
+| MinIO Console | `http://localhost:9001` | Local storage administration |
+
+Check backend health:
+
+```bash
+curl http://localhost:8000/health
+```
+
+Expected response:
+
+```json
+{
+  "status": "ok",
+  "database": "connected"
+}
+```
+
+PostgreSQL data is persisted in the `fsp_postgres_data` Docker volume and MinIO data in `fsp_minio_data`.
+
+To stop the stack:
+
+```bash
+docker compose down
+```
+
+To stop it and delete persisted local data:
+
+```bash
+docker compose down -v
+```
+
+---
+
+## 3. Start the Frontend
+
+Open another terminal:
+
+```bash
+cd frontend
+npm install
+```
+
+Create the frontend environment file.
+
+### macOS / Linux
+
+```bash
+cp .env.local.example .env.local
+```
+
+### Windows PowerShell
+
+```powershell
+Copy-Item .env.local.example .env.local
+```
+
+The default development configuration points the frontend to the local backend:
+
+```env
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+```
+
+Start the development server:
+
+```bash
+npm run dev
+```
+
+Open:
+
+```text
+http://localhost:3000
+```
+
+The frontend API client uses `NEXT_PUBLIC_API_BASE_URL` as the backend base URL and calls the backend under `/api/v1`.
+
+---
+
+## Quick Start
+
+Once the repository has been cloned, the normal local-development workflow is:
+
+### Terminal 1 — Backend
 
 ```bash
 cp .env.example .env
 docker compose up --build
 ```
 
-Then check:
+### Terminal 2 — Frontend
 
 ```bash
-curl http://localhost:8000/health
-# {"status":"ok","database":"connected"}
+cd frontend
+npm install
+cp .env.local.example .env.local
+npm run dev
 ```
 
-Postgres data persists in the `fsp_postgres_data` volume across restarts (MinIO's in `fsp_minio_data`). To reset either: `docker compose down -v`.
+Then open:
 
-## Option B — Run locally without Docker (Windows / PowerShell)
+```text
+http://localhost:3000
+```
 
-Requires Python 3.13 and a local PostgreSQL instance.
+> On Windows PowerShell, use `Copy-Item` instead of `cp` if needed.
+
+---
+
+## Backend: Local Run Without Docker
+
+If you want to run FastAPI directly on your machine, you need Python 3.13 and a local PostgreSQL instance.
+
+### Windows / PowerShell
 
 ```powershell
 python -m venv .venv
@@ -53,114 +297,338 @@ python -m venv .venv
 pip install -r requirements.txt
 
 Copy-Item .env.example .env
-# Edit .env: set DATABASE_URL to point at your local Postgres instance,
-# e.g. postgresql+asyncpg://fsp:dev_password_change_me@localhost:5432/field_service
-# (create the `field_service` database and `fsp` user yourself if running
-# Postgres natively rather than via docker-compose's db service — see
-# docker-compose.yml's db service for the exact credentials used there)
+```
 
+Update `DATABASE_URL` in `.env` to point to your local PostgreSQL instance.
+
+For example:
+
+```env
+DATABASE_URL=postgresql+asyncpg://fsp:dev_password_change_me@localhost:5432/field_service
+```
+
+Create the `field_service` database and `fsp` user in PostgreSQL, then start the API:
+
+```powershell
 uvicorn app.main:app --reload
 ```
 
-Then check `http://localhost:8000/health` in a browser or via `Invoke-RestMethod`:
+Check:
 
 ```powershell
 Invoke-RestMethod http://localhost:8000/health
 ```
 
-## Running tests
+---
+
+## Database Migrations
+
+The project uses Alembic for database migrations.
+
+Apply migrations with:
 
 ```bash
-pytest
+alembic upgrade head
 ```
 
-Tests mock the database connection (see `tests/test_health.py`) so they run without a live Postgres instance. This is intentional — fast, no-infra unit tests stay mocked; real DB connectivity is proven separately via the docker-compose smoke test above.
+When the backend is running in Docker, run Alembic in the appropriate backend environment/container if migrations are not already applied by your development workflow.
 
-## Seed / demo data
+---
+
+## Demo Data
+
+With PostgreSQL migrated and MinIO running:
 
 ```bash
 python -m app.seed_demo_data
 ```
 
-Requires a running, migrated Postgres and (for the one document it generates) a running MinIO — the same stack `docker-compose up` provides. Creates one demonstration organization — an owner, a dispatcher, two technicians, three customers with equipment, and five jobs spanning the full lifecycle (new, mid-flight with a pending additional-work decision, completed with a paid invoice and a generated PDF report, a same-equipment follow-up that auto-flags as a warranty claim, and a cancelled job) — by calling the real service-layer functions rather than raw inserts, so running it also doubles as an end-to-end smoke test of every primary workflow in the Product Definition's Section 7. Prints login credentials and the resulting dashboard numbers at the end. Not idempotent — every run creates a fresh organization; running it twice just leaves two demo orgs behind, which is harmless.
+The seed script creates a demonstration organization with:
 
-## Rate limiting
+- an owner
+- a dispatcher
+- two technicians
+- three customers with equipment
+- five jobs covering different lifecycle states
 
-`POST /auth/login` is rate-limited: 5 attempts per 60-second window, keyed by client IP (`app/core/rate_limit.py`). In-memory and in-process — no Redis, consistent with the background-tasks decision below — so limits reset on restart and aren't shared across multiple worker processes; fine for the MVP's single-process deployment, revisit if that ever changes. Register and refresh aren't rate-limited; only login is a credential-guessing surface.
+The sample jobs include new and in-progress work, pending additional work, a completed paid job with a generated PDF document, a warranty follow-up, and a cancelled job.
 
-## Error responses
+The script prints demo login credentials and dashboard values when it finishes.
 
-Every error response across the API — including a raised `HTTPException`, a Pydantic request-validation failure, and a genuinely unhandled exception (a bug) — has the same `{"detail": "<string>"}` shape (`app/core/exceptions.py`). Validation failures previously returned a list of structured error objects under `detail`; unhandled exceptions previously returned a bare-text, non-JSON 500. An unhandled exception's real error and traceback are logged server-side; the client only ever sees a generic "An unexpected error occurred" message.
+> The seed command is not idempotent. Running it multiple times creates additional demo organizations.
 
-## Background tasks
+---
 
-`app/workers/` holds two background tasks, both run via FastAPI's
-`BackgroundTasks` (or, for the warranty check, directly — see below), per
-the Technical Blueprint's frozen decision for the MVP: no Redis, no
-separate worker process.
+## Authentication and Access
 
-- `document_tasks.generate_document` — triggered by `POST
-  /jobs/{id}/documents`, scheduled via `BackgroundTasks.add_task(...)`.
-  Opens its own DB session, renders the PDF, uploads it to S3, and
-  persists a `Document` row + timeline entry in one commit — or none of
-  it, on failure (rolled back, logged, request/response cycle
-  unaffected). A failed run simply leaves no `Document` row behind; that
-  absence *is* the status signal, so no separate status column exists.
-- `warranty_check_task.run_warranty_check` — a standalone, directly-
-  callable function (see its own module docstring for why no startup-loop
-  or cron wiring exists yet). Read-only: logs jobs whose warranty is at
-  or approaching expiry, writes nothing to the database.
+The application includes authentication plus organization/user management.
 
-Both wrap their work in try/except + log (Milestone 17's hardening pass —
-before that, only `document_tasks` had this; `warranty_check_task` was
-brought in line with it) — this is the ceiling of "retry" that
-`BackgroundTasks` can meaningfully offer: it runs a task exactly once,
-so there's no retry loop to add, only making sure a failure is visible
-(a log line, an absent row) instead of silently disappearing.
+The frontend contains public login and registration routes and keeps operational pages under the authenticated application layout.
 
-**Migrate to arq + Redis when:** per the Technical Blueprint's Section 9,
-this becomes worth the added operational cost once either becomes true —
+The backend's login endpoint is rate-limited to **5 attempts per 60 seconds per client IP** for the MVP.
 
-1. Real users depend on a background task (document generation, and
-   later AI processing) not silently failing, and need actual retry
-   guarantees rather than "check the logs, try again manually."
-2. The warranty check needs guaranteed daily execution rather than
-   "runs if a process happens to invoke it" — i.e., once it's actually
-   wired to a scheduler and that scheduler's reliability starts to matter.
+API error responses use a consistent shape:
 
-Until then, `BackgroundTasks` plus the try/except+log pattern above is
-the deliberate choice — not a placeholder waiting to be replaced on a
-timeline, but the right tool for pre-production volume.
+```json
+{
+  "detail": "Error message"
+}
+```
 
-## Milestone 0 checklist status
+---
 
-- [x] App starts locally via `uvicorn`
-- [x] App starts via docker-compose
-- [x] `/health` returns 200 and confirms DB connection (and 503 with a clear reason if not)
-- [x] Repo structure matches the blueprint's package layout
+## Main Frontend Routes
 
-## Milestone 1 checklist status
+```text
+/login
+/register
+/dashboard
+/jobs
+/jobs/new
+/jobs/[id]
+/customers
+/customers/new
+/customers/[id]
+/equipment/[id]
+/schedule
+/settings
+```
 
-- [x] App refuses to start with missing required env vars (`DATABASE_URL`, `JWT_SECRET`), with a clear error message — proven in `tests/test_config.py` via a real subprocess import, not just a mock
-- [x] Settings correctly load from `.env` in dev and from real env vars in prod-like mode (pydantic-settings' `env_file` support)
-- [x] No secret values appear in logs or version control (`.env` is gitignored; `.env.example` has no real secrets)
+---
 
-## Milestone 19 checklist status
+## Frontend Development Commands
 
-- [x] Centralized exception handlers producing a consistent `{"detail": "<string>"}` shape across every router, including validation errors and unhandled exceptions (`app/core/exceptions.py`, `tests/test_error_handling.py`)
-- [x] Basic rate limiting on `/auth/login` — confirmed via 5-attempts-per-window throttling in `tests/test_rate_limit.py`
-- [x] Seed/demo data script (`python -m app.seed_demo_data`) runs cleanly against a fresh migrated database — run for real against the local docker-compose stack (Postgres + MinIO), not just written; produced a demo-ready dataset and a real, downloadable generated PDF
-- [x] Full smoke test of every primary workflow from Product Definition Section 7 — end to end, via the seed script's real service-layer calls (intake → assignment → on-site execution → additional-work approval/billing → completion/documents → payment → warranty), plus the full automated test suite (see below)
-- [x] No secrets/PII beyond ordinary business data appear in logs — audited every `logger.*` call site and every place a `Settings` secret field (`jwt_secret`, `database_url`, `s3_secret_key`, `anthropic_api_key`) is used; none are ever logged or printed, and `asyncpg`'s own connection-failure messages were verified empirically (not assumed) to never echo back the DSN's password
+Run these from `frontend/`.
 
-## What's NOT in this MVP
+### Development Server
 
-Explicitly out of scope per the Product Definition's Section 10 — not gaps, deliberate exclusions: full accounting/invoicing, warehouse/inventory tracking, payroll, multi-branch/multi-location support, a native mobile app, a customer self-service portal, SLA/contract management, and complex third-party integrations (accounting software, payment gateways, telephony).
+```bash
+npm run dev
+```
 
-Genuinely deferred, with a documented trigger for when to build it:
+Starts the Next.js development server.
 
-- **No frontend** — this repo is backend-only, per its own name; the Next.js app referenced in the Technical Blueprint is a separate project.
-- **No arq/Redis migration** — `BackgroundTasks` remains the task-execution mechanism for document generation and the (optional, disabled-by-default) AI layer; see the "Background tasks" section above for the specific triggers that justify migrating.
-- **The warranty-check scheduled task has no production wiring** (no startup sleep-loop, no cron-triggered endpoint) — `workers/warranty_check_task.run_warranty_check()` is implemented and tested as a standalone function; wiring it to an actual scheduler is a deployment-time decision, deliberately left out since Milestone 15's own scope explicitly excludes new API endpoints for it.
-- **Rate limiting is single-process and in-memory** — see the "Rate limiting" section above for when a shared store (Redis, or similar) becomes worth the added infrastructure.
-- **AI is disabled by default and off the request path** (`AI_ENABLED=false` — the `/ai/*` routes aren't even registered when off; enabling requires `ANTHROPIC_API_KEY`). When on, every `/ai/*` call creates a `pending` row and processes it via the same `BackgroundTasks` mechanism as document generation — see "Background tasks" above.
+### Production Build
+
+```bash
+npm run build
+```
+
+Creates a production build.
+
+### Production Server
+
+```bash
+npm run start
+```
+
+Starts the production Next.js server after a build.
+
+### Linting
+
+```bash
+npm run lint
+```
+
+Runs ESLint.
+
+### Type Checking
+
+```bash
+npm run typecheck
+```
+
+Runs the TypeScript compiler without emitting files.
+
+### Formatting
+
+```bash
+npm run format
+```
+
+Formats frontend files with Prettier.
+
+### Formatting Check
+
+```bash
+npm run format:check
+```
+
+Checks formatting without modifying files.
+
+---
+
+## Backend Tests
+
+Run:
+
+```bash
+pytest
+```
+
+The fast unit tests mock database connectivity where appropriate.
+
+Real PostgreSQL connectivity can be checked separately through the Docker Compose stack and `/health` endpoint.
+
+---
+
+## Background Tasks
+
+The MVP currently uses FastAPI `BackgroundTasks` rather than a separate Redis-backed worker system.
+
+Current background-task functionality includes:
+
+- PDF document generation and S3 upload
+- warranty-check task logic
+
+Document generation opens its own database session, generates the PDF, uploads it to S3-compatible storage, and persists the resulting document/timeline data.
+
+For a larger production deployment, a dedicated queue such as Redis + arq can replace the current approach when reliable retries or guaranteed scheduled execution become necessary.
+
+---
+
+## Object Storage
+
+Local development uses MinIO as an S3-compatible object store.
+
+The backend accesses object storage through an S3 client abstraction, allowing the local MinIO setup to be replaced by another S3-compatible provider in deployment through configuration.
+
+Docker Compose exposes:
+
+```text
+MinIO API:     http://localhost:9000
+MinIO Console: http://localhost:9001
+```
+
+---
+
+## Environment Configuration
+
+Backend configuration starts from:
+
+```text
+.env.example
+```
+
+Frontend configuration starts from:
+
+```text
+frontend/.env.local.example
+```
+
+For frontend development, the main variable is:
+
+```env
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+```
+
+Do not commit real secrets or local `.env` files.
+
+---
+
+## Architecture
+
+At a high level:
+
+```text
+Browser
+   |
+   v
+Next.js / React frontend
+   |
+   | HTTP / JSON
+   v
+FastAPI routers
+   |
+   v
+Service layer
+   |
+   +--------------------+
+   |                    |
+   v                    v
+PostgreSQL          S3-compatible storage
+(SQLAlchemy)            (MinIO locally)
+```
+
+The backend keeps HTTP concerns in routers and business logic in services. Persistence is handled through asynchronous SQLAlchemy models and sessions.
+
+The frontend is organized around Next.js App Router routes, reusable feature components, shared UI components, typed API access, and authentication/session helpers.
+
+---
+
+## Core Domain Flow
+
+A typical service operation can move through the platform roughly as follows:
+
+```text
+Customer
+   |
+   v
+Equipment
+   |
+   v
+Service / Repair Job
+   |
+   +--> Technician assignment
+   +--> Status transitions
+   +--> Timeline
+   +--> Photos / materials
+   +--> Additional work
+   +--> Payment
+   +--> PDF documents
+   +--> Warranty / follow-up
+```
+
+The dashboard and schedule provide operational views over these domain records.
+
+---
+
+## Production Notes
+
+The current repository is an MVP-oriented implementation.
+
+Before a production deployment, review at least:
+
+- production secrets and environment management
+- CORS/origin configuration
+- HTTPS and reverse proxy configuration
+- database backups
+- production object storage
+- persistent application logging and monitoring
+- multi-process implications for in-memory rate limiting
+- reliable background-job processing if retries become required
+- frontend and backend deployment configuration
+
+---
+
+## Project Status
+
+The backend implements the MVP scope described by the project's implementation roadmap, including:
+
+- authentication
+- organization and user management
+- customers
+- equipment
+- repair jobs
+- assignments
+- lifecycle and timeline
+- materials
+- additional work
+- payments
+- documents
+- warranty logic
+- dashboard functionality
+- optional AI assistance
+- backend hardening
+
+The repository also contains the working **Next.js frontend** for the main user workflows.
+
+The project should therefore be treated as a **full-stack application** rather than a backend-only service.
+
+---
+
+## License
+
+No license file is currently documented in this repository.
+
+Add a `LICENSE` file and update this section if the project is going to be distributed publicly under a specific license.
