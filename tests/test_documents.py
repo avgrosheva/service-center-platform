@@ -30,13 +30,14 @@ logs — not disappear silently.
 import io
 import logging
 import uuid
+from urllib.parse import parse_qs, urlparse
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 from pypdf import PdfReader
 
 from app.main import app
-from app.storage.s3_client import download_bytes
+from app.storage.s3_client import PRESIGNED_URL_EXPIRY_SECONDS, download_bytes
 
 
 def _unique_email() -> str:
@@ -171,6 +172,14 @@ async def test_triggering_generation_returns_immediately_and_document_appears(cl
     assert documents[0]["type"] == "job_report"
     assert documents[0]["s3_key"].startswith(f"{owner['organization_id']}/jobs/{job['id']}/documents/")
     assert documents[0]["s3_key"].endswith(".pdf")
+
+    # Added alongside the frontend's Milestone F12, same gap/fix as
+    # PhotoRead.view_url: download_url is a presigned GET, not a
+    # persisted column, so this asserts it's actually generated and
+    # time-limited the same way the photo upload URL is.
+    assert documents[0]["download_url"].startswith("http")
+    query = parse_qs(urlparse(documents[0]["download_url"]).query)
+    assert query["X-Amz-Expires"] == [str(PRESIGNED_URL_EXPIRY_SECONDS)]
 
 
 @pytest.mark.asyncio

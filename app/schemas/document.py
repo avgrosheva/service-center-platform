@@ -20,3 +20,8 @@ class DocumentRead(BaseModel):
     type: DocumentType
     s3_key: str
     generated_at: datetime
+    # Not a persisted column — same gap, same fix as PhotoRead.view_url
+    # (see that schema's own docstring): job_items_service attaches a
+    # freshly generated, short-lived presigned GET URL at read time, since
+    # `s3_key` alone is meaningless to a browser against a private bucket.
+    download_url: str

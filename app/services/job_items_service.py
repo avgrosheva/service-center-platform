@@ -154,7 +154,7 @@ async def create_photo(
 
     await db.flush()
     await db.refresh(photo)
-    return photo
+    return _with_view_url(photo)
 
 
 async def list_photos(
@@ -163,7 +163,16 @@ async def list_photos(
     job = await _get_job_for_access(db, organization_id, job_id, requesting_user=requesting_user)
 
     result = await db.execute(select(Photo).where(Photo.job_id == job.id).order_by(Photo.created_at))
-    return list(result.scalars().all())
+    return [_with_view_url(photo) for photo in result.scalars().all()]
+
+
+def _with_view_url(photo: Photo) -> Photo:
+    # A transient attribute, not a persisted column — see PhotoRead's own
+    # docstring on `view_url`. Generating a presigned URL is pure local
+    # signing (no network call), so doing this per-photo on every list
+    # call is cheap.
+    photo.view_url = s3_client.generate_presigned_download_url(photo.s3_key)
+    return photo
 
 
 async def add_material(
@@ -393,4 +402,9 @@ async def list_documents(
     result = await db.execute(
         select(Document).where(Document.job_id == job.id).order_by(Document.generated_at)
     )
-    return list(result.scalars().all())
+    documents = list(result.scalars().all())
+    for document in documents:
+        # Transient attribute, not a persisted column — see DocumentRead's
+        # own docstring on `download_url`.
+        document.download_url = s3_client.generate_presigned_download_url(document.s3_key)
+    return documents

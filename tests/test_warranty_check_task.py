@@ -24,7 +24,7 @@ have propagated unhandled — this proves the fix.
 
 import logging
 import uuid
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
@@ -35,6 +35,20 @@ from app.models.job import Job, JobStatus
 from app.models.organization import Organization
 from app.models.user import User, UserRole
 from app.workers.warranty_check_task import APPROACHING_EXPIRY_WINDOW_DAYS, run_warranty_check
+
+
+def _utc_today() -> date:
+    """
+    run_warranty_check's own date window is computed against
+    `datetime.now(timezone.utc).date()`, not local system time (see
+    job_service._find_active_warranty_origin's identical convention).
+    These boundary tests build warranty_expires_at values relative to
+    "today" and must use that same UTC basis — plain `date.today()`
+    reads the test-runner machine's local calendar date, which silently
+    diverges from the backend's UTC date for a few hours around any
+    local-midnight/UTC-midnight mismatch.
+    """
+    return datetime.now(timezone.utc).date()
 
 
 async def _make_job(session, *, warranty_expires_at: date | None, organization_name: str) -> Job:
@@ -72,7 +86,7 @@ async def _make_job(session, *, warranty_expires_at: date | None, organization_n
 
 @pytest.mark.asyncio
 async def test_run_warranty_check_finds_jobs_within_the_window_across_organizations():
-    today = date.today()
+    today = _utc_today()
     async with AsyncSessionLocal() as session:
         expires_today = await _make_job(session, warranty_expires_at=today, organization_name="Org Today")
         expires_soon = await _make_job(
@@ -109,7 +123,7 @@ async def test_run_warranty_check_finds_jobs_within_the_window_across_organizati
 
 @pytest.mark.asyncio
 async def test_run_warranty_check_reports_correct_days_remaining_and_organization():
-    today = date.today()
+    today = _utc_today()
     async with AsyncSessionLocal() as session:
         job = await _make_job(
             session, warranty_expires_at=today + timedelta(days=4), organization_name="Org Days Remaining"

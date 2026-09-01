@@ -57,6 +57,22 @@ def generate_presigned_upload_url(key: str, content_type: str) -> str:
     )
 
 
+def generate_presigned_download_url(key: str) -> str:
+    """
+    Returns a presigned URL the frontend can GET directly to view/download
+    the object, valid for PRESIGNED_URL_EXPIRY_SECONDS — same short-lived,
+    no-bucket-policy-change approach as the upload URL. Added for the
+    frontend's Milestone F10: `PhotoRead` embeds this per photo so a
+    thumbnail grid has something to point an `<img>` at without the bucket
+    itself ever needing to be public.
+    """
+    return _client.generate_presigned_url(
+        "get_object",
+        Params={"Bucket": settings.s3_bucket_name, "Key": key},
+        ExpiresIn=PRESIGNED_URL_EXPIRY_SECONDS,
+    )
+
+
 def upload_bytes(key: str, data: bytes, content_type: str) -> None:
     """
     Uploads bytes directly to the bucket via a normal (non-presigned)

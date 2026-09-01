@@ -37,6 +37,7 @@ from app.routers.dashboard import router as dashboard_router
 from app.routers.equipment import router as equipment_router
 from app.routers.job_items import router as job_items_router
 from app.routers.jobs import router as jobs_router
+from app.routers.organizations import router as organizations_router
 from app.routers.payments import router as payments_router
 from app.routers.users import router as users_router
 
@@ -56,6 +57,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # ops endpoint.
     app.include_router(auth_router, prefix="/api/v1")
     app.include_router(users_router, prefix="/api/v1")
+    app.include_router(organizations_router, prefix="/api/v1")
     app.include_router(customers_router, prefix="/api/v1")
     app.include_router(equipment_router, prefix="/api/v1")
     app.include_router(jobs_router, prefix="/api/v1")

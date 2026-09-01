@@ -25,7 +25,7 @@ itself would never produce through normal use.
 """
 
 import uuid
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -829,6 +829,23 @@ async def _set_warranty_expires_at(job_id: str, expires_at: date) -> None:
         await session.commit()
 
 
+def _utc_today() -> date:
+    """
+    The backend's own warranty comparison (job_service._find_active_warranty_origin)
+    computes "today" as `datetime.now(timezone.utc).date()`, not local
+    system time. These boundary tests must use the exact same basis —
+    plain `date.today()` reads the test-runner machine's LOCAL calendar
+    date, which silently diverges from the backend's UTC date for a few
+    hours around any local-midnight/UTC-midnight mismatch (e.g. UTC+3:
+    local rolls to a new day three hours before UTC does). Within that
+    window, "yesterday" computed locally can equal "today" in UTC,
+    flipping these boundary assertions — exactly what broke here once,
+    caught by the daily test run crossing that window, not by a flaw in
+    the backend's own (UTC-consistent, correct) logic.
+    """
+    return datetime.now(timezone.utc).date()
+
+
 @pytest.mark.asyncio
 async def test_new_job_on_equipment_with_active_warranty_auto_flags_and_links_origin(client):
     owner = await _register_org(client)
@@ -861,7 +878,7 @@ async def test_new_job_on_equipment_past_warranty_window_does_not_auto_flag(clie
         client, owner["access_token"], customer_id=customer["id"], equipment_id=equipment["id"]
     )
     await _complete_job(client, owner["access_token"], origin_job["id"], technician["id"])
-    await _set_warranty_expires_at(origin_job["id"], date.today() - timedelta(days=1))
+    await _set_warranty_expires_at(origin_job["id"], _utc_today() - timedelta(days=1))
 
     new_job = await _create_job(
         client, owner["access_token"], customer_id=customer["id"], equipment_id=equipment["id"]
@@ -882,7 +899,7 @@ async def test_warranty_boundary_exactly_on_expiry_date_still_counts(client):
         client, owner["access_token"], customer_id=customer["id"], equipment_id=equipment["id"]
     )
     await _complete_job(client, owner["access_token"], origin_job["id"], technician["id"])
-    await _set_warranty_expires_at(origin_job["id"], date.today())
+    await _set_warranty_expires_at(origin_job["id"], _utc_today())
 
     new_job = await _create_job(
         client, owner["access_token"], customer_id=customer["id"], equipment_id=equipment["id"]
@@ -903,7 +920,7 @@ async def test_warranty_boundary_one_day_after_expiry_does_not_count(client):
         client, owner["access_token"], customer_id=customer["id"], equipment_id=equipment["id"]
     )
     await _complete_job(client, owner["access_token"], origin_job["id"], technician["id"])
-    await _set_warranty_expires_at(origin_job["id"], date.today() - timedelta(days=1))
+    await _set_warranty_expires_at(origin_job["id"], _utc_today() - timedelta(days=1))
 
     new_job = await _create_job(
         client, owner["access_token"], customer_id=customer["id"], equipment_id=equipment["id"]

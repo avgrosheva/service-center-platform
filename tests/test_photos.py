@@ -180,6 +180,24 @@ async def test_confirming_upload_persists_metadata_and_writes_timeline_entry(cli
 
 
 @pytest.mark.asyncio
+async def test_confirming_upload_returns_a_time_limited_view_url(client):
+    # Added alongside the frontend's Milestone F10 — PhotoRead.view_url is
+    # a presigned GET, not a persisted column, so this asserts it's
+    # actually generated (not just present-but-empty) and expires the same
+    # way the upload URL does.
+    owner = await _register_org(client)
+    customer = await _create_customer(client, owner["access_token"])
+    job = await _create_job(client, owner["access_token"], customer_id=customer["id"])
+    upload = await _get_upload_url(client, owner["access_token"], job["id"])
+
+    photo = await _create_photo(client, owner["access_token"], job["id"], s3_key=upload["s3_key"])
+
+    assert photo["view_url"].startswith("http")
+    query = parse_qs(urlparse(photo["view_url"]).query)
+    assert query["X-Amz-Expires"] == [str(PRESIGNED_URL_EXPIRY_SECONDS)]
+
+
+@pytest.mark.asyncio
 async def test_invalid_tag_is_rejected(client):
     owner = await _register_org(client)
     customer = await _create_customer(client, owner["access_token"])

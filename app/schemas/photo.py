@@ -37,3 +37,10 @@ class PhotoRead(BaseModel):
     s3_key: str
     tag: PhotoTag | None
     created_at: datetime
+    # Not a persisted column — job_items_service attaches this to the ORM
+    # instance at read time (a freshly generated, short-lived presigned GET
+    # URL) before it's serialized. Added for the frontend's Milestone F10,
+    # which otherwise has no way to render an uploaded photo at all: the
+    # bucket is private and only `s3_key` (meaningless to a browser) was
+    # previously exposed.
+    view_url: str
