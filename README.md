@@ -34,6 +34,8 @@ Service Center Platform uses the **Repair Job** as the central operational recor
 
 A job connects the customer and equipment to the technician, current status, activity timeline, photos, materials, additional work, payment, generated documents, and warranty context. Instead of managing each part of a repair in a separate tool, the team can follow the lifecycle from intake to closure in one system.
 
+<img src="docs/images/dashboard.png" width="55%" />
+
 ## Product Workflow
 
 ```text
@@ -56,6 +58,8 @@ Warranty / Follow-up
 
 The job timeline keeps the operational history visible as the repair moves through this lifecycle.
 
+<img src="docs/images/job-details1.png" width="45%" /> <img src="docs/images/job-details2.png" width="45%" /> 
+
 ## Key Capabilities
 
 - **Customers** — customer records connected to equipment and repair history.
@@ -71,6 +75,10 @@ The job timeline keeps the operational history visible as the repair moves throu
 - **Warranty** — connect follow-up work to previous equipment repairs and warranty context.
 - **Dashboard** — owner-level operational visibility across service activity.
 - **Optional AI assistance** — the backend includes an optional AI-assist layer that supports the workflow without replacing operational decisions.
+
+<img src="docs/images/jobs.png" width="55%" />
+
+<img src="docs/images/schedule.png" width="55%" />
 
 ## Demo / Seed Data
 
