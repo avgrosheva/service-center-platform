@@ -58,7 +58,7 @@ Warranty / Follow-up
 
 The job timeline keeps the operational history visible as the repair moves through this lifecycle.
 
-<img src="docs/images/job-details1.png" width="75%" />
+<img src="docs/images/job-details1.png" width="80%" />
 
  <img src="docs/images/job-details2.png" width="80%" /> 
 
