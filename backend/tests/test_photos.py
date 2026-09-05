@@ -157,6 +157,38 @@ async def test_upload_url_rejects_an_unsupported_content_type(client):
 
 
 @pytest.mark.asyncio
+async def test_confirming_upload_rejects_a_key_never_issued_for_this_job(client):
+    owner = await _register_org(client)
+    customer = await _create_customer(client, owner["access_token"])
+    job = await _create_job(client, owner["access_token"], customer_id=customer["id"])
+
+    await _create_photo(
+        client,
+        owner["access_token"],
+        job["id"],
+        s3_key="not-a-real-key.jpg",
+        expected_status=400,
+    )
+
+
+@pytest.mark.asyncio
+async def test_confirming_upload_rejects_another_jobs_photo_key(client):
+    owner = await _register_org(client)
+    customer = await _create_customer(client, owner["access_token"])
+    job_a = await _create_job(client, owner["access_token"], customer_id=customer["id"])
+    job_b = await _create_job(client, owner["access_token"], customer_id=customer["id"])
+    upload_for_a = await _get_upload_url(client, owner["access_token"], job_a["id"])
+
+    await _create_photo(
+        client,
+        owner["access_token"],
+        job_b["id"],
+        s3_key=upload_for_a["s3_key"],
+        expected_status=400,
+    )
+
+
+@pytest.mark.asyncio
 async def test_confirming_upload_persists_metadata_and_writes_timeline_entry(client):
     owner = await _register_org(client)
     headers = _auth_headers(owner["access_token"])
@@ -219,8 +251,14 @@ async def test_listing_photos_returns_them_in_upload_order(client):
     customer = await _create_customer(client, owner["access_token"])
     job = await _create_job(client, owner["access_token"], customer_id=customer["id"])
 
-    first = await _create_photo(client, owner["access_token"], job["id"], s3_key="a.jpg", tag="before")
-    second = await _create_photo(client, owner["access_token"], job["id"], s3_key="b.jpg", tag="after")
+    first_upload = await _get_upload_url(client, owner["access_token"], job["id"])
+    first = await _create_photo(
+        client, owner["access_token"], job["id"], s3_key=first_upload["s3_key"], tag="before"
+    )
+    second_upload = await _get_upload_url(client, owner["access_token"], job["id"])
+    second = await _create_photo(
+        client, owner["access_token"], job["id"], s3_key=second_upload["s3_key"], tag="after"
+    )
 
     response = await client.get(f"/api/v1/jobs/{job['id']}/photos", headers=headers)
 

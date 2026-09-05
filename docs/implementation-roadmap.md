@@ -848,3 +848,15 @@ The order above **is** the recommended order — it was structured so each miles
 4. **Parts of Milestone 16 (Dashboard)** — if time is extremely tight, ship `/dashboard/summary` (the operational counts) and defer the more complex `/dashboard/metrics` aggregates (revenue per technician, repeat-customer rate) to a fast-follow — but do not cut the dashboard entirely, since owner visibility is the core value proposition.
 
 **What should never be cut, even under time pressure:** Milestones 0–13 (everything through Payments) — this is the operational backbone the entire Product Definition is built around. If forced to choose between finishing Milestone 13 properly versus starting Milestone 14 early, finish 13 first.
+
+---
+
+## Post-Roadmap Additions
+
+Backend work shipped after Milestone 19, driven by direct user feedback and a follow-up security review rather than pre-planned milestones:
+
+- **Self-service profile endpoints.** `User` (Milestone 3) gained `phone` and `avatar_s3_key` columns. `routers/auth.py` gained `PATCH /auth/me` (name/email/phone), `POST /auth/me/password` (current-password-gated change), and the `/auth/me/avatar` upload-url/confirm/delete trio — reusing Milestone 10's presigned-upload pattern for a user's own avatar instead of a job photo.
+- **Owner password reset.** `UserUpdate` (Milestone 5) gained an optional `password` field, so `PATCH /users/{id}` can reset a teammate's forgotten password alongside role/active-status — the path that doesn't depend on the account holder still being able to log in anywhere.
+- **Job history filters.** `list_jobs` (Milestone 8/9) gained `customer_id`/`equipment_id` query filters on `GET /jobs`, specifically so the frontend's Customer/Equipment Detail pages could render real job history instead of a placeholder.
+- **Two IDOR fixes in the presigned-upload confirm step.** Both the new avatar-confirm endpoint and Milestone 10's `create_photo` originally trusted a client-submitted `s3_key` outright. Both now validate the key against the exact pattern issued to that user/job (`{organization_id}/...` plus the owning id, checked by regex) before persisting it — closing a cross-tenant arbitrary-object-read hole where a client could confirm any object in the bucket, including another organization's, as its own.
+- **Public vs. internal S3 endpoint.** `Settings` gained `s3_public_endpoint_url` (Milestone 10), used only for signing presigned URLs; `s3_endpoint_url` remains what the backend itself uses to reach the bucket. Under Docker Compose these differ (`minio:9000` internally vs. `localhost:9000` for a browser) — signing presigned URLs against the internal hostname produced links a browser could never resolve.

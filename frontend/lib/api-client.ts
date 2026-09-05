@@ -47,6 +47,7 @@ export type ApiErrorKind =
   | 'unauthorized' // 401
   | 'forbidden' // 403
   | 'not_found' // 404
+  | 'conflict' // 409
   | 'validation' // 422
   | 'rate_limited' // 429
   | 'server_error' // 5xx
@@ -61,6 +62,8 @@ function classify(status: number): ApiErrorKind {
       return 'forbidden';
     case 404:
       return 'not_found';
+    case 409:
+      return 'conflict';
     case 422:
       return 'validation';
     case 429:

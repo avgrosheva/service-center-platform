@@ -7,9 +7,10 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-sans: var(--font-golos-text);
+  --font-mono: var(--font-jetbrains-mono);
+  --font-stamp: var(--font-oswald);
+  --font-heading: var(--font-golos-text);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -18,11 +19,10 @@
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
+  --color-status-active: var(--status-active);
+  --color-status-delayed: var(--status-delayed);
+  --color-status-completed: var(--status-completed);
+  --color-status-pending: var(--status-pending);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -39,82 +39,66 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  /* Flattened rather than scaled: every "card-sized" rounding utility
+     (lg through 4xl) lands on the same ~13px radius the user asked for
+     instead of ballooning with each step (the old *1.4/*1.8/*2.2/*2.6
+     multipliers put `rounded-3xl` at ~39px — the "loaded" corners this
+     replaces). Only sm/md (chips, small controls) stay a touch tighter. */
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-xl: var(--radius);
+  --radius-2xl: var(--radius);
+  --radius-3xl: var(--radius);
+  --radius-4xl: var(--radius);
 }
 
+/*
+ * "Studio Console" — the whole product's world now (direction contract
+ * v3, see .impeccable/surfaces/…dashboard-page-tsx.md). Started as a
+ * dashboard-only experiment behind `.console`; approved and promoted to
+ * `:root` app-wide once the user confirmed the direction. A soft sage
+ * workspace, a floating black icon rail, bold display type, and one
+ * bright accent (#04CA8B, the user's own pick) doing all the pointing.
+ * The retired kraft-tag and dark "Night Ops Console" worlds (v1/v2) are
+ * gone from the stylesheet; DESIGN.md keeps their history.
+ */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
+  --background: oklch(0.91 0.015 155);
+  --foreground: oklch(0.18 0.01 150);
+  --card: oklch(0.985 0.004 150);
+  --card-foreground: oklch(0.18 0.01 150);
+  --popover: oklch(0.985 0.004 150);
+  --popover-foreground: oklch(0.18 0.01 150);
+  --primary: #04ca8b;
+  --primary-foreground: oklch(0.15 0.01 150);
+  --secondary: oklch(0.95 0.006 150);
+  --secondary-foreground: oklch(0.18 0.01 150);
+  --muted: oklch(0.94 0.008 150);
+  --muted-foreground: oklch(0.5 0.012 150);
+  --accent: oklch(0.93 0.035 165);
+  --accent-foreground: oklch(0.18 0.01 150);
+  --destructive: oklch(0.58 0.19 25);
+  --border: oklch(0.85 0.012 150);
+  --input: oklch(0.85 0.012 150);
+  --ring: #04ca8b;
+  --radius: 13px;
+  --sidebar: oklch(0.14 0.008 150);
+  --sidebar-foreground: oklch(0.95 0.004 150);
+  --sidebar-primary: #04ca8b;
+  --sidebar-primary-foreground: oklch(0.14 0.008 150);
+  --sidebar-accent: oklch(0.22 0.008 150);
+  --sidebar-accent-foreground: oklch(0.95 0.004 150);
+  --sidebar-border: oklch(0.3 0.008 150 / 50%);
+  --sidebar-ring: #04ca8b;
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* Status: the accent doubles as "active/nominal"; the other three are
+     its own family plus the two signal colors a repair shop already
+     reads as urgent (red) or attention-needed (amber). */
+  --status-active: #04ca8b;
+  --status-delayed: oklch(0.6 0.19 25);
+  --status-completed: oklch(0.48 0.11 155);
+  --status-pending: oklch(0.72 0.15 80);
 }
 
 @layer base {

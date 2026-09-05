@@ -5,6 +5,8 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useLocale } from '@/lib/i18n/context';
+import type { TranslationKey } from '@/lib/i18n/context';
 
 export type EquipmentFormValues = {
   type: string;
@@ -16,13 +18,16 @@ export type EquipmentFormValues = {
   warranty_until: string;
 };
 
-export function validateEquipmentForm(values: EquipmentFormValues): Record<string, string> {
+export function validateEquipmentForm(
+  values: EquipmentFormValues,
+  t: (key: TranslationKey) => string,
+): Record<string, string> {
   const errors: Record<string, string> = {};
   if (values.type.trim().length === 0) {
-    errors.type = 'Type is required.';
+    errors.type = t('equipmentForm.typeRequired');
   }
   if (values.installation_address.trim().length === 0) {
-    errors.installation_address = 'Installation address is required.';
+    errors.installation_address = t('equipmentForm.addressRequired');
   }
   return errors;
 }
@@ -45,6 +50,7 @@ export function EquipmentForm({
   onSubmit: (values: EquipmentFormValues) => void;
   onCancel?: () => void;
 }) {
+  const { t } = useLocale();
   const [values, setValues] = useState(initialValues);
 
   const field = (key: keyof EquipmentFormValues, label: string, type: string = 'text') => (
@@ -69,27 +75,26 @@ export function EquipmentForm({
       }}
       className="flex flex-col gap-4"
     >
-      {field('type', 'Type')}
-      {field('brand', 'Brand')}
-      {field('model', 'Model')}
-      {field('serial_number', 'Serial number')}
-      {field('installation_address', 'Installation address')}
+      {field('type', t('equipmentForm.type'))}
+      {field('brand', t('equipmentForm.brand'))}
+      {field('model', t('equipmentForm.model'))}
+      {field('serial_number', t('equipmentForm.serialNumber'))}
+      {field('installation_address', t('equipmentForm.installationAddress'))}
       {showAddressChangeNote && (
-        <p className="-mt-3 text-xs text-zinc-500 dark:text-zinc-400">
-          Changing this won&apos;t update the address already recorded on this equipment&apos;s past
-          jobs.
+        <p className="-mt-3 text-xs text-muted-foreground">
+          {t('equipmentForm.addressChangeNote')}
         </p>
       )}
-      {field('install_date', 'Install date', 'date')}
-      {field('warranty_until', 'Warranty until', 'date')}
+      {field('install_date', t('equipmentForm.installDate'), 'date')}
+      {field('warranty_until', t('equipmentForm.warrantyUntil'), 'date')}
 
       <div className="flex gap-2">
         <Button type="submit" disabled={submitting}>
-          {submitting ? 'Saving…' : submitLabel}
+          {submitting ? t('common.saving') : submitLabel}
         </Button>
         {onCancel && (
           <Button type="button" variant="ghost" onClick={onCancel} disabled={submitting}>
-            Cancel
+            {t('common.cancel')}
           </Button>
         )}
       </div>

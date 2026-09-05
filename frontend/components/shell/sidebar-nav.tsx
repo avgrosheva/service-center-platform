@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 import { cn } from '@/lib/utils';
+import { useLocale } from '@/lib/i18n/context';
 import type { NavItem } from '@/components/shell/nav-config';
 
 /**
@@ -14,6 +15,7 @@ import type { NavItem } from '@/components/shell/nav-config';
  */
 export function SidebarNav({ items, onNavigate }: { items: NavItem[]; onNavigate?: () => void }) {
   const pathname = usePathname();
+  const { t } = useLocale();
 
   return (
     <nav className="flex flex-col gap-1">
@@ -28,12 +30,12 @@ export function SidebarNav({ items, onNavigate }: { items: NavItem[]; onNavigate
             className={cn(
               'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
               active
-                ? 'bg-zinc-900 text-zinc-50 dark:bg-zinc-50 dark:text-zinc-900'
-                : 'text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800',
+                ? 'bg-sidebar-primary text-sidebar-primary-foreground'
+                : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
             )}
           >
             <Icon className="h-4 w-4 shrink-0" />
-            {item.label}
+            {t(item.labelKey)}
           </Link>
         );
       })}

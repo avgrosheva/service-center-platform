@@ -6,12 +6,14 @@ import { useRouter } from 'next/navigation';
 
 import { ApiError } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth';
+import { useLocale } from '@/lib/i18n/context';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 export function RegisterForm() {
+  const { t } = useLocale();
   const router = useRouter();
   const { register } = useAuth();
   const [organizationName, setOrganizationName] = useState('');
@@ -29,7 +31,7 @@ export function RegisterForm() {
       await register({ organization_name: organizationName, full_name: fullName, email, password });
       router.push('/dashboard');
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : 'Something went wrong. Please try again.');
+      setError(err instanceof ApiError ? err.detail : t('auth.register.errorGeneric'));
       setSubmitting(false);
     }
   }
@@ -37,12 +39,12 @@ export function RegisterForm() {
   return (
     <Card className="w-full max-w-sm">
       <CardHeader>
-        <CardTitle>Create your organization</CardTitle>
+        <CardTitle>{t('auth.register.title')}</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="organization_name">Organization name</Label>
+            <Label htmlFor="organization_name">{t('auth.register.organizationName')}</Label>
             <Input
               id="organization_name"
               required
@@ -51,7 +53,7 @@ export function RegisterForm() {
             />
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="full_name">Your name</Label>
+            <Label htmlFor="full_name">{t('auth.register.yourName')}</Label>
             <Input
               id="full_name"
               required
@@ -60,7 +62,7 @@ export function RegisterForm() {
             />
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{t('auth.register.email')}</Label>
             <Input
               id="email"
               type="email"
@@ -71,7 +73,7 @@ export function RegisterForm() {
             />
           </div>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">{t('auth.register.password')}</Label>
             <Input
               id="password"
               type="password"
@@ -83,17 +85,17 @@ export function RegisterForm() {
             />
           </div>
           {error && (
-            <p role="alert" className="text-sm text-red-600 dark:text-red-400">
+            <p role="alert" className="text-sm text-destructive">
               {error}
             </p>
           )}
           <Button type="submit" disabled={submitting}>
-            {submitting ? 'Creating…' : 'Create organization'}
+            {submitting ? t('auth.register.creating') : t('auth.register.createOrganization')}
           </Button>
-          <p className="text-center text-sm text-zinc-500 dark:text-zinc-400">
-            Already have an account?{' '}
-            <a href="/login" className="font-medium text-zinc-900 underline dark:text-zinc-50">
-              Log in
+          <p className="text-center text-sm text-muted-foreground">
+            {t('auth.register.alreadyHaveAccount')}{' '}
+            <a href="/login" className="font-medium text-foreground underline">
+              {t('auth.register.logIn')}
             </a>
           </p>
         </form>

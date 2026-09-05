@@ -210,6 +210,7 @@ New → Assigned → En Route → In Progress → Awaiting Parts → Awaiting Ap
 9. **Technician Mobile View** (simplified job list + field capture form)
 10. **Calendar / Schedule view** (basic — day/week list of assigned jobs)
 11. **Settings** (users, roles, organization info)
+12. **Profile** (self-service — the signed-in user's own name, email, phone, password, and avatar; distinct from Settings, which is the owner managing *other* users)
 
 ---
 

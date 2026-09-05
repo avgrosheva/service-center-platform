@@ -68,3 +68,10 @@ class User(Base, TimestampMixin):
         nullable=False,
     )
     is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
+    phone: Mapped[str | None] = mapped_column(nullable=True)
+    # The object key of this user's avatar image in the S3-compatible
+    # bucket (same store job photos use), not a URL — a presigned,
+    # short-lived view URL is generated from this at read time (see
+    # user_service.attach_avatar_url), the same "store the key, sign a URL
+    # on demand" split job_items_service uses for photos.
+    avatar_s3_key: Mapped[str | None] = mapped_column(nullable=True)

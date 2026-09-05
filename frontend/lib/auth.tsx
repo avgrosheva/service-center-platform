@@ -35,6 +35,8 @@ type AuthContextValue = {
   login: (data: LoginRequest) => Promise<void>;
   register: (data: RegisterRequest) => Promise<void>;
   logout: () => Promise<void>;
+  /** Pushes a fresh User (e.g. the response of a profile edit or avatar upload) into shared auth state, so every consumer — the top-right UserMenu included — reflects it immediately without a full reload. */
+  updateUser: (user: User) => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -121,7 +123,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.push('/login');
   }, [router]);
 
-  const value: AuthContextValue = { user, loading, login, register, logout };
+  const updateUser = useCallback((next: User) => setUser(next), []);
+
+  const value: AuthContextValue = { user, loading, login, register, logout, updateUser };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

@@ -17,6 +17,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RequireRole } from '@/components/shell/require-role';
+import { useLocale } from '@/lib/i18n/context';
+import type { TranslationKey } from '@/lib/i18n/context';
 import { ApiError, browserApiClient } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth';
 import type {
@@ -30,6 +32,12 @@ import type {
 const SELECT_CLASS =
   'h-8 rounded-lg border border-input bg-transparent px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30';
 
+const ROLE_KEYS: Record<UserRole, TranslationKey> = {
+  owner: 'settings.roleOwner',
+  dispatcher: 'settings.roleDispatcher',
+  technician: 'settings.roleTechnician',
+};
+
 export default function SettingsPage() {
   return (
     <RequireRole allow={['owner', 'dispatcher']}>
@@ -39,6 +47,8 @@ export default function SettingsPage() {
 }
 
 function SettingsContent() {
+  const { t, locale } = useLocale();
+  const dateLocale = locale === 'ru' ? 'ru-RU' : 'en-US';
   const { user: currentUser } = useAuth();
   const isOwner = currentUser?.role === 'owner';
 
@@ -60,12 +70,13 @@ function SettingsContent() {
         }
       } catch (err) {
         if (!cancelled)
-          setLoadError(err instanceof ApiError ? err.detail : 'Failed to load settings.');
+          setLoadError(err instanceof ApiError ? err.detail : t('settings.failedToLoad'));
       }
     })();
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const activeOwnerCount = useMemo(
@@ -83,15 +94,16 @@ function SettingsContent() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editRole, setEditRole] = useState<UserRole>('technician');
   const [editActive, setEditActive] = useState(true);
+  const [editPassword, setEditPassword] = useState('');
   const [rowError, setRowError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     const errors: Record<string, string> = {};
-    if (!newEmail.trim()) errors.email = 'Email is required.';
-    if (!newName.trim()) errors.full_name = 'Name is required.';
-    if (!newPassword.trim()) errors.password = 'Password is required.';
+    if (!newEmail.trim()) errors.email = t('settings.emailRequired');
+    if (!newName.trim()) errors.full_name = t('settings.fullNameRequired');
+    if (!newPassword.trim()) errors.password = t('settings.passwordRequired');
     if (Object.keys(errors).length > 0) {
       setCreateErrors(errors);
       return;
@@ -112,9 +124,11 @@ function SettingsContent() {
       setNewPassword('');
       setNewRole('technician');
     } catch (err) {
-      setCreateErrors({
-        _general: err instanceof ApiError ? err.detail : 'Failed to create user.',
-      });
+      let message = t('settings.failedToCreateUser');
+      if (err instanceof ApiError) {
+        message = err.kind === 'conflict' ? t('settings.emailAlreadyExists') : err.detail;
+      }
+      setCreateErrors({ _general: message });
     } finally {
       setCreating(false);
     }
@@ -124,16 +138,23 @@ function SettingsContent() {
     setEditingId(u.id);
     setEditRole(u.role);
     setEditActive(u.is_active);
+    setEditPassword('');
     setRowError(null);
   };
 
   const handleSaveEdit = async (id: string, original: User) => {
+    if (editPassword && editPassword.length < 8) {
+      setRowError(t('settings.newPasswordTooShort', { count: 8 }));
+      return;
+    }
+
     setSavingId(id);
     setRowError(null);
     try {
       const payload: UserUpdateRequest = {};
       if (editRole !== original.role) payload.role = editRole;
       if (editActive !== original.is_active) payload.is_active = editActive;
+      if (editPassword) payload.password = editPassword;
       const updated = await browserApiClient<User>(`/users/${id}`, {
         method: 'PATCH',
         body: payload,
@@ -141,7 +162,7 @@ function SettingsContent() {
       setUsers((prev) => prev?.map((u) => (u.id === id ? updated : u)) ?? prev);
       setEditingId(null);
     } catch (err) {
-      setRowError(err instanceof ApiError ? err.detail : 'Failed to update user.');
+      setRowError(err instanceof ApiError ? err.detail : t('settings.failedToUpdateUser'));
     } finally {
       setSavingId(null);
     }
@@ -154,7 +175,7 @@ function SettingsContent() {
       const updated = await browserApiClient<User>(`/users/${id}`, { method: 'DELETE' });
       setUsers((prev) => prev?.map((u) => (u.id === id ? updated : u)) ?? prev);
     } catch (err) {
-      setRowError(err instanceof ApiError ? err.detail : 'Failed to deactivate user.');
+      setRowError(err instanceof ApiError ? err.detail : t('settings.failedToDeactivateUser'));
     } finally {
       setSavingId(null);
     }
@@ -163,43 +184,46 @@ function SettingsContent() {
   if (loadError) return <p className="text-sm text-destructive">{loadError}</p>;
 
   return (
-    <div className="flex flex-col gap-4">
-      <Card className="max-w-lg">
+    <div className="mx-auto flex max-w-6xl flex-col gap-4">
+      <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+        {t('settings.title')}
+      </h1>
+      <Card>
         <CardHeader>
-          <CardTitle>Organization</CardTitle>
+          <CardTitle>{t('settings.organization')}</CardTitle>
         </CardHeader>
         <CardContent>
           {org === null ? (
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading…</p>
+            <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
           ) : (
             <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
-              <dt className="font-medium text-zinc-500 dark:text-zinc-400">Name</dt>
+              <dt className="font-medium text-muted-foreground">{t('settings.name')}</dt>
               <dd>{org.name}</dd>
-              <dt className="font-medium text-zinc-500 dark:text-zinc-400">Since</dt>
-              <dd>{new Date(org.created_at).toLocaleDateString()}</dd>
+              <dt className="font-medium text-muted-foreground">{t('settings.since')}</dt>
+              <dd>{new Date(org.created_at).toLocaleDateString(dateLocale)}</dd>
             </dl>
           )}
         </CardContent>
       </Card>
 
-      <Card className="max-w-2xl">
+      <Card>
         <CardHeader>
-          <CardTitle>Users</CardTitle>
+          <CardTitle>{t('settings.users')}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           {rowError && <p className="text-sm text-destructive">{rowError}</p>}
 
           {users === null ? (
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading…</p>
+            <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
           ) : (
-            <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
+            <div className="overflow-x-auto rounded-2xl bg-background">
               <table className="w-full min-w-[560px] text-left text-sm">
-                <thead className="border-b border-zinc-200 text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+                <thead className="border-b border-border text-xs text-muted-foreground">
                   <tr>
-                    <th className="px-3 py-2 font-medium">Name</th>
-                    <th className="px-3 py-2 font-medium">Email</th>
-                    <th className="px-3 py-2 font-medium">Role</th>
-                    <th className="px-3 py-2 font-medium">Status</th>
+                    <th className="px-3 py-2 font-medium">{t('settings.tableName')}</th>
+                    <th className="px-3 py-2 font-medium">{t('settings.tableEmail')}</th>
+                    <th className="px-3 py-2 font-medium">{t('settings.tableRole')}</th>
+                    <th className="px-3 py-2 font-medium">{t('settings.tableStatus')}</th>
                     {isOwner && <th className="px-3 py-2 font-medium" />}
                   </tr>
                 </thead>
@@ -209,24 +233,21 @@ function SettingsContent() {
                     const isSoleActiveOwner =
                       u.role === 'owner' && u.is_active && activeOwnerCount <= 1;
                     return editingId === u.id ? (
-                      <tr
-                        key={u.id}
-                        className="border-b border-zinc-100 last:border-0 dark:border-zinc-900"
-                      >
+                      <tr key={u.id} className="border-b border-border last:border-0">
                         <td className="px-3 py-2">{u.full_name}</td>
-                        <td className="px-3 py-2 text-zinc-500 dark:text-zinc-400">{u.email}</td>
+                        <td className="px-3 py-2 text-muted-foreground">{u.email}</td>
                         <td className="px-3 py-2">
                           {isSelf ? (
-                            u.role
+                            t(ROLE_KEYS[u.role])
                           ) : (
                             <select
                               value={editRole}
                               onChange={(e) => setEditRole(e.target.value as UserRole)}
                               className={SELECT_CLASS}
                             >
-                              <option value="owner">Owner</option>
-                              <option value="dispatcher">Dispatcher</option>
-                              <option value="technician">Technician</option>
+                              <option value="owner">{t('settings.roleOwner')}</option>
+                              <option value="dispatcher">{t('settings.roleDispatcher')}</option>
+                              <option value="technician">{t('settings.roleTechnician')}</option>
                             </select>
                           )}
                         </td>
@@ -238,38 +259,53 @@ function SettingsContent() {
                               disabled={isSoleActiveOwner && editActive}
                               onChange={(e) => setEditActive(e.target.checked)}
                             />
-                            Active
+                            {t('settings.active')}
                           </label>
                         </td>
                         <td className="px-3 py-2 text-right whitespace-nowrap">
-                          <Button
-                            size="sm"
-                            onClick={() => void handleSaveEdit(u.id, u)}
-                            disabled={savingId === u.id}
-                          >
-                            {savingId === u.id ? 'Saving…' : 'Save'}
-                          </Button>
-                          <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}>
-                            Cancel
-                          </Button>
+                          <div className="flex items-center justify-end gap-2">
+                            {!isSelf && (
+                              <Input
+                                type="password"
+                                autoComplete="new-password"
+                                placeholder={t('settings.newPasswordOptional')}
+                                value={editPassword}
+                                onChange={(e) => setEditPassword(e.target.value)}
+                                className="h-8 w-56"
+                              />
+                            )}
+                            <Button
+                              size="sm"
+                              onClick={() => void handleSaveEdit(u.id, u)}
+                              disabled={savingId === u.id}
+                            >
+                              {savingId === u.id ? t('common.saving') : t('common.save')}
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}>
+                              {t('common.cancel')}
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ) : (
-                      <tr
-                        key={u.id}
-                        className="border-b border-zinc-100 last:border-0 dark:border-zinc-900"
-                      >
+                      <tr key={u.id} className="border-b border-border last:border-0">
                         <td className="px-3 py-2">
                           {u.full_name}
-                          {isSelf && <span className="ml-1 text-xs text-zinc-500">(you)</span>}
+                          {isSelf && (
+                            <span className="ml-1 text-xs text-muted-foreground">
+                              {t('settings.you')}
+                            </span>
+                          )}
                         </td>
-                        <td className="px-3 py-2 text-zinc-500 dark:text-zinc-400">{u.email}</td>
-                        <td className="px-3 py-2 capitalize">{u.role}</td>
-                        <td className="px-3 py-2">{u.is_active ? 'Active' : 'Deactivated'}</td>
+                        <td className="px-3 py-2 text-muted-foreground">{u.email}</td>
+                        <td className="px-3 py-2">{t(ROLE_KEYS[u.role])}</td>
+                        <td className="px-3 py-2">
+                          {u.is_active ? t('settings.active') : t('settings.deactivated')}
+                        </td>
                         {isOwner && (
                           <td className="px-3 py-2 text-right whitespace-nowrap">
                             <Button size="sm" variant="ghost" onClick={() => startEdit(u)}>
-                              Edit
+                              {t('common.edit')}
                             </Button>
                             {u.is_active && !isSoleActiveOwner && (
                               <Button
@@ -278,7 +314,7 @@ function SettingsContent() {
                                 onClick={() => void handleDeactivate(u.id)}
                                 disabled={savingId === u.id}
                               >
-                                Deactivate
+                                {t('settings.deactivate')}
                               </Button>
                             )}
                           </td>
@@ -300,51 +336,63 @@ function SettingsContent() {
                 <p className="w-full text-sm text-destructive">{createErrors._general}</p>
               )}
               <div className="flex flex-col gap-1">
-                <Label htmlFor="new-name">Name</Label>
+                <Label htmlFor="new-name">{t('settings.name')}</Label>
                 <Input
                   id="new-name"
+                  autoComplete="off"
                   value={newName}
                   aria-invalid={!!createErrors.full_name}
                   onChange={(e) => setNewName(e.target.value)}
                   className="w-36"
                 />
+                {createErrors.full_name && (
+                  <p className="text-xs text-destructive">{createErrors.full_name}</p>
+                )}
               </div>
               <div className="flex flex-col gap-1">
-                <Label htmlFor="new-email">Email</Label>
+                <Label htmlFor="new-email">{t('settings.email')}</Label>
                 <Input
                   id="new-email"
+                  autoComplete="off"
                   value={newEmail}
                   aria-invalid={!!createErrors.email}
                   onChange={(e) => setNewEmail(e.target.value)}
                   className="w-44"
                 />
+                {createErrors.email && (
+                  <p className="text-xs text-destructive">{createErrors.email}</p>
+                )}
               </div>
               <div className="flex flex-col gap-1">
-                <Label htmlFor="new-role">Role</Label>
+                <Label htmlFor="new-role">{t('settings.role')}</Label>
                 <select
                   id="new-role"
                   value={newRole}
                   onChange={(e) => setNewRole(e.target.value as UserRole)}
                   className={SELECT_CLASS}
                 >
-                  <option value="owner">Owner</option>
-                  <option value="dispatcher">Dispatcher</option>
-                  <option value="technician">Technician</option>
+                  <option value="owner">{t('settings.roleOwner')}</option>
+                  <option value="dispatcher">{t('settings.roleDispatcher')}</option>
+                  <option value="technician">{t('settings.roleTechnician')}</option>
                 </select>
               </div>
               <div className="flex flex-col gap-1">
-                <Label htmlFor="new-password">Password</Label>
+                <Label htmlFor="new-password">{t('settings.password')}</Label>
                 <Input
                   id="new-password"
                   type="password"
+                  autoComplete="new-password"
                   value={newPassword}
                   aria-invalid={!!createErrors.password}
                   onChange={(e) => setNewPassword(e.target.value)}
                   className="w-36"
                 />
+                {createErrors.password && (
+                  <p className="text-xs text-destructive">{createErrors.password}</p>
+                )}
               </div>
               <Button type="submit" disabled={creating} className="self-end">
-                {creating ? 'Creating…' : 'Add user'}
+                {creating ? t('settings.creating') : t('settings.addUser')}
               </Button>
             </form>
           )}

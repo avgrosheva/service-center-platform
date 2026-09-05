@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 
 import { REFRESH_TOKEN_COOKIE } from '@/lib/auth-cookies';
 import { LoginForm } from '@/components/auth/login-form';
+import { LocaleToggle } from '@/components/shell/locale-toggle';
 
 /**
  * Server Component — checks (cheaply, no backend call) whether a session
@@ -18,7 +19,10 @@ export default async function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 p-8 dark:bg-black">
+    <div className="relative flex min-h-screen items-center justify-center bg-background p-8">
+      <div className="absolute top-4 right-4">
+        <LocaleToggle />
+      </div>
       <LoginForm />
     </div>
   );

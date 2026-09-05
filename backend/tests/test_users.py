@@ -228,6 +228,56 @@ async def test_deactivating_the_sole_owner_is_rejected_via_patch(client):
 
 
 @pytest.mark.asyncio
+async def test_owner_can_reset_a_teammates_forgotten_password(client):
+    owner = await _register_org(client)
+    member = await _create_user(client, owner["access_token"], role="technician")
+
+    response = await client.patch(
+        f"/api/v1/users/{member['id']}",
+        json={"password": "brand-new-password-1"},
+        headers=_auth_headers(owner["access_token"]),
+    )
+    assert response.status_code == 200, response.text
+
+    old_login = await client.post(
+        "/api/v1/auth/login", json={"email": member["email"], "password": member["password"]}
+    )
+    assert old_login.status_code == 401
+
+    new_login = await client.post(
+        "/api/v1/auth/login", json={"email": member["email"], "password": "brand-new-password-1"}
+    )
+    assert new_login.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_resetting_a_password_rejects_a_too_short_value(client):
+    owner = await _register_org(client)
+    member = await _create_user(client, owner["access_token"], role="technician")
+
+    response = await client.patch(
+        f"/api/v1/users/{member['id']}", json={"password": "short"}, headers=_auth_headers(owner["access_token"])
+    )
+
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_dispatcher_cannot_reset_a_teammates_password(client):
+    owner = await _register_org(client)
+    dispatcher = await _create_user(client, owner["access_token"], role="dispatcher")
+    member = await _create_user(client, owner["access_token"], role="technician")
+
+    response = await client.patch(
+        f"/api/v1/users/{member['id']}",
+        json={"password": "brand-new-password-1"},
+        headers=_auth_headers(dispatcher["access_token"]),
+    )
+
+    assert response.status_code == 403
+
+
+@pytest.mark.asyncio
 async def test_deactivating_an_owner_succeeds_once_another_active_owner_exists(client):
     owner = await _register_org(client)
     headers = _auth_headers(owner["access_token"])

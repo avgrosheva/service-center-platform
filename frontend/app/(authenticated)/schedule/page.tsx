@@ -15,6 +15,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { RequireRole } from '@/components/shell/require-role';
 import { JobStatusBadge } from '@/components/jobs/job-status-badge';
+import { useLocale } from '@/lib/i18n/context';
 import { ApiError, browserApiClient } from '@/lib/api-client';
 import type { Job } from '@/types/api';
 
@@ -42,6 +43,8 @@ export default function SchedulePage() {
 }
 
 function ScheduleContent() {
+  const { t, locale } = useLocale();
+  const dateLocale = locale === 'ru' ? 'ru-RU' : 'en-US';
   const [jobs, setJobs] = useState<Job[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('day');
@@ -54,12 +57,13 @@ function ScheduleContent() {
         const data = await browserApiClient<Job[]>('/jobs');
         if (!cancelled) setJobs(data);
       } catch (err) {
-        if (!cancelled) setError(err instanceof ApiError ? err.detail : 'Failed to load jobs.');
+        if (!cancelled) setError(err instanceof ApiError ? err.detail : t('jobs.failedToLoad'));
       }
     })();
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const { byDay, unscheduled } = useMemo(() => {
@@ -95,7 +99,10 @@ function ScheduleContent() {
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="mx-auto flex max-w-6xl flex-col gap-4">
+      <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+        {t('schedule.title')}
+      </h1>
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex gap-1">
           <Button
@@ -103,24 +110,24 @@ function ScheduleContent() {
             size="sm"
             onClick={() => setViewMode('day')}
           >
-            Day
+            {t('schedule.day')}
           </Button>
           <Button
             variant={viewMode === 'week' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setViewMode('week')}
           >
-            Week
+            {t('schedule.week')}
           </Button>
         </div>
         <Button variant="ghost" size="sm" onClick={() => shift(-1)}>
-          ← Prev
+          {t('schedule.prev')}
         </Button>
         <Button variant="ghost" size="sm" onClick={() => setAnchor(new Date())}>
-          Today
+          {t('schedule.today')}
         </Button>
         <Button variant="ghost" size="sm" onClick={() => shift(1)}>
-          Next →
+          {t('schedule.next')}
         </Button>
       </div>
 
@@ -131,33 +138,33 @@ function ScheduleContent() {
       )}
 
       {jobs === null ? (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading…</p>
+        <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
       ) : (
         <div className="flex flex-col gap-4">
           {days.map((d) => {
             const key = dateKey(d);
             const dayJobs = byDay.get(key) ?? [];
             return (
-              <div key={key} className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+              <div key={key} className="rounded-3xl bg-card p-4">
                 <p className="mb-2 text-sm font-medium">
-                  {d.toLocaleDateString(undefined, {
+                  {d.toLocaleDateString(dateLocale, {
                     weekday: 'long',
                     month: 'short',
                     day: 'numeric',
                   })}
                 </p>
                 {dayJobs.length === 0 ? (
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400">No jobs scheduled.</p>
+                  <p className="text-sm text-muted-foreground">{t('schedule.noJobsScheduled')}</p>
                 ) : (
                   <ul className="flex flex-col gap-2">
                     {dayJobs.map((job) => (
                       <li key={job.id}>
                         <Link
                           href={`/jobs/${job.id}`}
-                          className="flex items-center gap-3 rounded-md px-2 py-1.5 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                          className="flex items-center gap-3 rounded-md px-2 py-1.5 text-sm hover:bg-muted"
                         >
-                          <span className="w-14 shrink-0 text-zinc-500 dark:text-zinc-400">
-                            {new Date(job.scheduled_at!).toLocaleTimeString(undefined, {
+                          <span className="w-14 shrink-0 text-muted-foreground">
+                            {new Date(job.scheduled_at!).toLocaleTimeString(dateLocale, {
                               hour: 'numeric',
                               minute: '2-digit',
                             })}
@@ -173,17 +180,17 @@ function ScheduleContent() {
             );
           })}
 
-          <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
-            <p className="mb-2 text-sm font-medium">Unscheduled</p>
+          <div className="rounded-3xl bg-card p-4">
+            <p className="mb-2 text-sm font-medium">{t('schedule.unscheduled')}</p>
             {unscheduled.length === 0 ? (
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">Nothing unscheduled.</p>
+              <p className="text-sm text-muted-foreground">{t('schedule.nothingUnscheduled')}</p>
             ) : (
               <ul className="flex flex-col gap-2">
                 {unscheduled.map((job) => (
                   <li key={job.id}>
                     <Link
                       href={`/jobs/${job.id}`}
-                      className="flex items-center gap-3 rounded-md px-2 py-1.5 text-sm hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                      className="flex items-center gap-3 rounded-md px-2 py-1.5 text-sm hover:bg-muted"
                     >
                       <JobStatusBadge status={job.status} />
                       <span className="truncate">{job.reported_issue}</span>

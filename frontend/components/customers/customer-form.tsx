@@ -5,6 +5,8 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useLocale } from '@/lib/i18n/context';
+import type { TranslationKey } from '@/lib/i18n/context';
 
 export type CustomerFormValues = {
   full_name: string;
@@ -18,14 +20,17 @@ export type CustomerFormValues = {
 // ever drifts out of sync with it).
 const PHONE_MIN_DIGITS = 7;
 
-export function validateCustomerForm(values: CustomerFormValues): Record<string, string> {
+export function validateCustomerForm(
+  values: CustomerFormValues,
+  t: (key: TranslationKey, vars?: Record<string, string | number>) => string,
+): Record<string, string> {
   const errors: Record<string, string> = {};
   if (values.full_name.trim().length === 0) {
-    errors.full_name = 'Full name is required.';
+    errors.full_name = t('customerForm.fullNameRequired');
   }
   const digitCount = values.phone.replace(/\D/g, '').length;
   if (digitCount < PHONE_MIN_DIGITS) {
-    errors.phone = `Phone must contain at least ${PHONE_MIN_DIGITS} digits.`;
+    errors.phone = t('customerForm.phoneMinDigits', { count: PHONE_MIN_DIGITS });
   }
   return errors;
 }
@@ -45,6 +50,7 @@ export function CustomerForm({
   onSubmit: (values: CustomerFormValues) => void;
   onCancel?: () => void;
 }) {
+  const { t } = useLocale();
   const [values, setValues] = useState(initialValues);
 
   return (
@@ -56,7 +62,7 @@ export function CustomerForm({
       className="flex flex-col gap-4"
     >
       <div className="flex flex-col gap-1">
-        <Label htmlFor="full_name">Full name</Label>
+        <Label htmlFor="full_name">{t('customerForm.fullName')}</Label>
         <Input
           id="full_name"
           value={values.full_name}
@@ -69,7 +75,7 @@ export function CustomerForm({
       </div>
 
       <div className="flex flex-col gap-1">
-        <Label htmlFor="phone">Phone</Label>
+        <Label htmlFor="phone">{t('customerForm.phone')}</Label>
         <Input
           id="phone"
           value={values.phone}
@@ -80,7 +86,7 @@ export function CustomerForm({
       </div>
 
       <div className="flex flex-col gap-1">
-        <Label htmlFor="notes">Notes</Label>
+        <Label htmlFor="notes">{t('customerForm.notes')}</Label>
         <textarea
           id="notes"
           value={values.notes}
@@ -93,11 +99,11 @@ export function CustomerForm({
 
       <div className="flex gap-2">
         <Button type="submit" disabled={submitting}>
-          {submitting ? 'Saving…' : submitLabel}
+          {submitting ? t('common.saving') : submitLabel}
         </Button>
         {onCancel && (
           <Button type="button" variant="ghost" onClick={onCancel} disabled={submitting}>
-            Cancel
+            {t('common.cancel')}
           </Button>
         )}
       </div>

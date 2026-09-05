@@ -52,7 +52,7 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 
 Frontend API requests are built on that base URL and the backend's `/api/v1` routing convention.
 
-The backend remains at the repository root under `app/`, with Docker Compose running the API and its local infrastructure.
+The backend lives under `backend/`, with Docker Compose running the API and its local infrastructure.
 
 ## Database
 
@@ -76,6 +76,8 @@ MinIO Console  http://localhost:9001
 ```
 
 The application talks to storage through its S3 integration, while PostgreSQL retains the structured metadata and relationships needed by the product.
+
+Presigned URLs are signed against a separate, browser-reachable endpoint (`S3_PUBLIC_ENDPOINT_URL`, falling back to `S3_ENDPOINT_URL` when unset) rather than the internal one the backend itself uses to reach the bucket. Locally under Docker Compose those two differ: the backend reaches MinIO at the Compose service name (`minio:9000`), but a presigned URL handed to the browser must resolve on the host machine instead (`localhost:9000`) — signing both kinds of URL against the internal hostname would produce links the browser can never actually load. Each endpoint that accepts a client-submitted `s3_key` to confirm an upload (job photos, a user's avatar) also validates that the key matches the pattern actually issued to that job/user before persisting it, so a client can't confirm an arbitrary object — including one belonging to another organization — as its own.
 
 ## Background Document Generation
 

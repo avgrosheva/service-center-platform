@@ -17,6 +17,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { RequireRole } from '@/components/shell/require-role';
+import { useLocale } from '@/lib/i18n/context';
 import { ApiError, browserApiClient } from '@/lib/api-client';
 import type { Customer } from '@/types/api';
 
@@ -31,6 +32,7 @@ export default function CustomersPage() {
 }
 
 function CustomersContent() {
+  const { t } = useLocale();
   const [searchInput, setSearchInput] = useState('');
   const [customers, setCustomers] = useState<Customer[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -39,20 +41,24 @@ function CustomersContent() {
   const [archivingId, setArchivingId] = useState<string | null>(null);
   const isFirstRun = useRef(true);
 
-  const load = useCallback(async (search: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await browserApiClient<Customer[]>('/customers', {
-        params: { search: search.trim() || undefined },
-      });
-      setCustomers(data);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.detail : 'Failed to load customers.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const load = useCallback(
+    async (search: string) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await browserApiClient<Customer[]>('/customers', {
+          params: { search: search.trim() || undefined },
+        });
+        setCustomers(data);
+      } catch (err) {
+        setError(err instanceof ApiError ? err.detail : t('customers.failedToLoad'));
+      } finally {
+        setLoading(false);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
 
   useEffect(() => {
     const delay = isFirstRun.current ? 0 : SEARCH_DEBOUNCE_MS;
@@ -67,7 +73,7 @@ function CustomersContent() {
       await browserApiClient(`/customers/${id}`, { method: 'DELETE' });
       setCustomers((prev) => (prev ? prev.filter((c) => c.id !== id) : prev));
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : 'Failed to archive customer.');
+      setError(err instanceof ApiError ? err.detail : t('customers.failedToArchive'));
     } finally {
       setArchivingId(null);
       setConfirmArchiveId(null);
@@ -75,17 +81,20 @@ function CustomersContent() {
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="mx-auto flex max-w-6xl flex-col gap-4">
+      <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+        {t('customers.title')}
+      </h1>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <input
           type="search"
-          placeholder="Search by name or phone…"
+          placeholder={t('customers.searchPlaceholder')}
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           className="h-8 w-64 max-w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
         />
         <Button render={<Link href="/customers/new" />} nativeButton={false}>
-          New customer
+          {t('customers.newCustomer')}
         </Button>
       </div>
 
@@ -96,33 +105,32 @@ function CustomersContent() {
       )}
 
       {loading ? (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading…</p>
+        <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
       ) : !customers || customers.length === 0 ? (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          {searchInput.trim() ? 'No customers match your search.' : 'No customers yet.'}
+        <p className="text-sm text-muted-foreground">
+          {searchInput.trim()
+            ? t('customers.noCustomersMatchSearch')
+            : t('customers.noCustomersYet')}
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
+        <div className="overflow-x-auto rounded-3xl bg-card">
           <table className="w-full min-w-[480px] text-left text-sm">
-            <thead className="border-b border-zinc-200 text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+            <thead className="border-b border-border text-xs text-muted-foreground">
               <tr>
-                <th className="px-4 py-2 font-medium">Name</th>
-                <th className="px-4 py-2 font-medium">Phone</th>
+                <th className="px-4 py-2 font-medium">{t('customers.tableName')}</th>
+                <th className="px-4 py-2 font-medium">{t('customers.tablePhone')}</th>
                 <th className="px-4 py-2 font-medium" />
               </tr>
             </thead>
             <tbody>
               {customers.map((customer) => (
-                <tr
-                  key={customer.id}
-                  className="border-b border-zinc-100 last:border-0 dark:border-zinc-900"
-                >
+                <tr key={customer.id} className="border-b border-border last:border-0">
                   <td className="px-4 py-2">
                     <Link href={`/customers/${customer.id}`} className="hover:underline">
                       {customer.full_name}
                     </Link>
                   </td>
-                  <td className="px-4 py-2 text-zinc-600 dark:text-zinc-400">{customer.phone}</td>
+                  <td className="px-4 py-2 text-muted-foreground">{customer.phone}</td>
                   <td className="px-4 py-2 text-right">
                     {confirmArchiveId === customer.id ? (
                       <span className="inline-flex items-center gap-2">
@@ -132,10 +140,10 @@ function CustomersContent() {
                           disabled={archivingId === customer.id}
                           onClick={() => void handleArchive(customer.id)}
                         >
-                          Confirm
+                          {t('common.confirm')}
                         </Button>
                         <Button variant="ghost" size="sm" onClick={() => setConfirmArchiveId(null)}>
-                          Cancel
+                          {t('common.cancel')}
                         </Button>
                       </span>
                     ) : (
@@ -144,7 +152,7 @@ function CustomersContent() {
                         size="sm"
                         onClick={() => setConfirmArchiveId(customer.id)}
                       >
-                        Archive
+                        {t('common.archive')}
                       </Button>
                     )}
                   </td>

@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RequireRole } from '@/components/shell/require-role';
 import { EquipmentForm, validateEquipmentForm } from '@/components/equipment/equipment-form';
 import type { EquipmentFormValues } from '@/components/equipment/equipment-form';
+import { useLocale } from '@/lib/i18n/context';
 import { ApiError, browserApiClient } from '@/lib/api-client';
 import { parseFieldErrors } from '@/lib/form-errors';
 import type { Equipment, EquipmentCreateRequest } from '@/types/api';
@@ -31,6 +32,7 @@ export default function NewEquipmentPage() {
 }
 
 function NewEquipmentContent() {
+  const { t } = useLocale();
   const { id: customerId } = useParams<{ id: string }>();
   const router = useRouter();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -38,7 +40,7 @@ function NewEquipmentContent() {
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (values: EquipmentFormValues) => {
-    const clientErrors = validateEquipmentForm(values);
+    const clientErrors = validateEquipmentForm(values, t);
     if (Object.keys(clientErrors).length > 0) {
       setFieldErrors(clientErrors);
       return;
@@ -66,7 +68,7 @@ function NewEquipmentContent() {
       if (err instanceof ApiError && err.kind === 'validation') {
         setFieldErrors(parseFieldErrors(err.detail));
       } else {
-        setFormError(err instanceof ApiError ? err.detail : 'Failed to create equipment.');
+        setFormError(err instanceof ApiError ? err.detail : t('equipmentNew.failedToCreate'));
       }
     } finally {
       setSubmitting(false);
@@ -77,13 +79,13 @@ function NewEquipmentContent() {
     <div className="flex flex-col gap-4">
       <Link
         href={`/customers/${customerId}`}
-        className="text-sm text-zinc-500 hover:underline dark:text-zinc-400"
+        className="text-sm text-muted-foreground hover:underline"
       >
-        ← Back to customer
+        {t('equipmentDetail.backToCustomer')}
       </Link>
       <Card className="max-w-md">
         <CardHeader>
-          <CardTitle>New equipment</CardTitle>
+          <CardTitle>{t('equipmentNew.title')}</CardTitle>
         </CardHeader>
         <CardContent>
           {formError && <p className="mb-3 text-sm text-destructive">{formError}</p>}
@@ -91,7 +93,7 @@ function NewEquipmentContent() {
             initialValues={EMPTY_VALUES}
             fieldErrors={fieldErrors}
             submitting={submitting}
-            submitLabel="Create equipment"
+            submitLabel={t('equipmentForm.createEquipment')}
             onSubmit={(values) => void handleSubmit(values)}
             onCancel={() => router.push(`/customers/${customerId}`)}
           />

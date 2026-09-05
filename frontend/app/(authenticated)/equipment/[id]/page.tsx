@@ -8,7 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RequireRole } from '@/components/shell/require-role';
 import { EquipmentForm, validateEquipmentForm } from '@/components/equipment/equipment-form';
+import { JobHistoryList } from '@/components/jobs/job-history-list';
 import type { EquipmentFormValues } from '@/components/equipment/equipment-form';
+import { useLocale } from '@/lib/i18n/context';
 import { ApiError, browserApiClient } from '@/lib/api-client';
 import { parseFieldErrors } from '@/lib/form-errors';
 import type { Equipment, EquipmentUpdateRequest } from '@/types/api';
@@ -22,6 +24,7 @@ export default function EquipmentDetailPage() {
 }
 
 function EquipmentDetailContent() {
+  const { t } = useLocale();
   const { id } = useParams<{ id: string }>();
 
   const [equipment, setEquipment] = useState<Equipment | null>(null);
@@ -47,7 +50,7 @@ function EquipmentDetailContent() {
         if (err instanceof ApiError && err.kind === 'not_found') {
           setNotFound(true);
         } else {
-          setLoadError(err instanceof ApiError ? err.detail : 'Failed to load equipment.');
+          setLoadError(err instanceof ApiError ? err.detail : t('equipmentDetail.failedToLoad'));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -56,10 +59,11 @@ function EquipmentDetailContent() {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const handleSave = async (values: EquipmentFormValues) => {
-    const clientErrors = validateEquipmentForm(values);
+    const clientErrors = validateEquipmentForm(values, t);
     if (Object.keys(clientErrors).length > 0) {
       setFieldErrors(clientErrors);
       return;
@@ -88,7 +92,7 @@ function EquipmentDetailContent() {
       if (err instanceof ApiError && err.kind === 'validation') {
         setFieldErrors(parseFieldErrors(err.detail));
       } else {
-        setFormError(err instanceof ApiError ? err.detail : 'Failed to save equipment.');
+        setFormError(err instanceof ApiError ? err.detail : t('equipmentDetail.failedToSave'));
       }
     } finally {
       setSubmitting(false);
@@ -96,31 +100,33 @@ function EquipmentDetailContent() {
   };
 
   if (loading) {
-    return <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading…</p>;
+    return <p className="text-sm text-muted-foreground">{t('common.loading')}</p>;
   }
 
   if (notFound) {
     return (
       <div className="flex flex-col gap-3">
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">Equipment not found.</p>
+        <p className="text-sm text-muted-foreground">{t('equipmentDetail.equipmentNotFound')}</p>
         <Link href="/customers" className="text-sm underline">
-          Back to customers
+          {t('customerDetail.backToCustomers')}
         </Link>
       </div>
     );
   }
 
   if (loadError || !equipment) {
-    return <p className="text-sm text-destructive">{loadError ?? 'Failed to load equipment.'}</p>;
+    return (
+      <p className="text-sm text-destructive">{loadError ?? t('equipmentDetail.failedToLoad')}</p>
+    );
   }
 
   return (
     <div className="flex flex-col gap-4">
       <Link
         href={`/customers/${equipment.customer_id}`}
-        className="text-sm text-zinc-500 hover:underline dark:text-zinc-400"
+        className="text-sm text-muted-foreground hover:underline"
       >
-        ← Back to customer
+        {t('equipmentDetail.backToCustomer')}
       </Link>
 
       <Card className="max-w-md">
@@ -148,7 +154,7 @@ function EquipmentDetailContent() {
               }}
               fieldErrors={fieldErrors}
               submitting={submitting}
-              submitLabel="Save"
+              submitLabel={t('common.save')}
               showAddressChangeNote
               onSubmit={(values) => void handleSave(values)}
               onCancel={() => {
@@ -160,18 +166,26 @@ function EquipmentDetailContent() {
           ) : (
             <>
               <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
-                <dt className="font-medium text-zinc-500 dark:text-zinc-400">Serial number</dt>
+                <dt className="font-medium text-muted-foreground">
+                  {t('equipmentDetail.serialNumber')}
+                </dt>
                 <dd>{equipment.serial_number || '—'}</dd>
-                <dt className="font-medium text-zinc-500 dark:text-zinc-400">Address</dt>
+                <dt className="font-medium text-muted-foreground">
+                  {t('equipmentDetail.address')}
+                </dt>
                 <dd>{equipment.installation_address}</dd>
-                <dt className="font-medium text-zinc-500 dark:text-zinc-400">Installed</dt>
+                <dt className="font-medium text-muted-foreground">
+                  {t('equipmentDetail.installed')}
+                </dt>
                 <dd>{equipment.install_date || '—'}</dd>
-                <dt className="font-medium text-zinc-500 dark:text-zinc-400">Warranty until</dt>
+                <dt className="font-medium text-muted-foreground">
+                  {t('equipmentDetail.warrantyUntil')}
+                </dt>
                 <dd>{equipment.warranty_until || '—'}</dd>
               </dl>
               <div>
                 <Button variant="outline" onClick={() => setEditing(true)}>
-                  Edit
+                  {t('common.edit')}
                 </Button>
               </div>
             </>
@@ -181,12 +195,14 @@ function EquipmentDetailContent() {
 
       <Card className="max-w-md">
         <CardHeader>
-          <CardTitle>Repair history</CardTitle>
+          <CardTitle>{t('equipmentDetail.repairHistory')}</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            Repair history arrives in Milestone F7.
-          </p>
+          <JobHistoryList
+            equipmentId={id}
+            emptyMessageKey="equipmentDetail.noJobsYet"
+            errorMessageKey="equipmentDetail.failedToLoadJobs"
+          />
         </CardContent>
       </Card>
     </div>

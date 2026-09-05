@@ -47,12 +47,10 @@ export default async function Home() {
   const result = await checkBackendHealth();
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-50 p-8 font-sans dark:bg-black">
-      <main className="flex w-full max-w-md flex-col gap-4 rounded-lg border border-black/10 bg-white p-8 dark:border-white/15 dark:bg-zinc-900">
-        <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">
-          Field Service Platform
-        </h1>
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">Backend connectivity check</p>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-8 font-sans">
+      <main className="flex w-full max-w-md flex-col gap-4 rounded-lg border border-border bg-card p-8">
+        <h1 className="text-xl font-semibold text-foreground">Field Service Platform</h1>
+        <p className="text-sm text-muted-foreground">Backend connectivity check</p>
 
         {result.ok ? (
           <div className="flex flex-col gap-1 rounded-md border border-green-200 bg-green-50 p-4 dark:border-green-900 dark:bg-green-950">

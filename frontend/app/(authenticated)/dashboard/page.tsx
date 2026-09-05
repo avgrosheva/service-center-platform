@@ -19,15 +19,28 @@
  * snapshot fields simply won't move when the range changes, which is
  * correct, not a bug — rather than the frontend re-deriving which two
  * fields are and aren't date-scoped and only special-casing those.
+ *
+ * Visual direction: "Studio Console" (see
+ * .impeccable/surfaces/…dashboard-page-tsx.md, direction v3 — a second
+ * user-pinned reference, superseding v2's dark "Night Ops Console").
+ * Soft sage ground, floating black icon rail, bold display type, one
+ * bright accent color (#04CA8B, the user's own pick) doing all the
+ * pointing. Originated here, then promoted to the whole app's default
+ * palette (globals.css `:root`) once the user confirmed the direction.
  */
 
 import { useCallback, useEffect, useState } from 'react';
+import { AlertTriangle, CheckCircle2, Receipt, Wrench } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { MetricCard } from '@/components/dashboard/metric-card';
+import { InstrumentReadout } from '@/components/dashboard/instrument-readout';
+import { PercentRing } from '@/components/dashboard/percent-ring';
+import { LollipopChart } from '@/components/dashboard/lollipop-chart';
 import { RequireRole } from '@/components/shell/require-role';
+import { useLocale } from '@/lib/i18n/context';
 import { ApiError, browserApiClient } from '@/lib/api-client';
 import type { DashboardMetrics, DashboardSummary } from '@/types/api';
 
@@ -40,9 +53,9 @@ function formatDecimal(value: string | null): string {
   return Number(value).toFixed(2);
 }
 
-function formatHours(value: number | null): string {
+function formatHours(value: number | null, unit: string): string {
   if (value === null) return '—';
-  return `${value.toFixed(1)} h`;
+  return `${value.toFixed(1)} ${unit}`;
 }
 
 function formatPercent(value: number): string {
@@ -58,6 +71,7 @@ export default function DashboardPage() {
 }
 
 function DashboardContent() {
+  const { t } = useLocale();
   const [range, setRange] = useState<DateRange>(EMPTY_RANGE);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
@@ -83,12 +97,12 @@ function DashboardContent() {
       try {
         await fetchDashboard(r);
       } catch (err) {
-        setError(err instanceof ApiError ? err.detail : 'Failed to load dashboard data.');
+        setError(err instanceof ApiError ? err.detail : t('dashboard.failedToLoad'));
       } finally {
         setLoading(false);
       }
     },
-    [fetchDashboard],
+    [fetchDashboard, t],
   );
 
   // Initial load on mount — `loading`/`error` already start at their
@@ -101,7 +115,7 @@ function DashboardContent() {
         await fetchDashboard(EMPTY_RANGE);
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof ApiError ? err.detail : 'Failed to load dashboard data.');
+          setError(err instanceof ApiError ? err.detail : t('dashboard.failedToLoad'));
         }
       } finally {
         if (!cancelled) {
@@ -112,143 +126,150 @@ function DashboardContent() {
     return () => {
       cancelled = true;
     };
-  }, [fetchDashboard]);
+  }, [fetchDashboard, t]);
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="date-from">From</Label>
-          <Input
-            id="date-from"
-            type="date"
-            value={range.from}
-            max={range.to || undefined}
-            onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))}
-            className="w-40"
-          />
+    <div className="mx-auto flex max-w-6xl flex-col gap-6">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+            {t('dashboard.title')}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t('dashboard.subtitle')}</p>
         </div>
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="date-to">To</Label>
-          <Input
-            id="date-to"
-            type="date"
-            value={range.to}
-            min={range.from || undefined}
-            onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))}
-            className="w-40"
-          />
-        </div>
-        <Button variant="outline" onClick={() => void load(range)} disabled={loading}>
-          Apply
-        </Button>
-        {(range.from || range.to) && (
+
+        <div className="flex flex-wrap items-end gap-3 rounded-full bg-card px-4 py-2">
+          <div className="flex flex-col gap-0.5">
+            <Label htmlFor="date-from" className="text-[10px] text-muted-foreground">
+              {t('common.from')}
+            </Label>
+            <Input
+              id="date-from"
+              type="date"
+              value={range.from}
+              max={range.to || undefined}
+              onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))}
+              className="h-6 w-32 border-0 bg-transparent p-0 font-mono text-xs tabular-nums shadow-none focus-visible:ring-0"
+            />
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <Label htmlFor="date-to" className="text-[10px] text-muted-foreground">
+              {t('common.to')}
+            </Label>
+            <Input
+              id="date-to"
+              type="date"
+              value={range.to}
+              min={range.from || undefined}
+              onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))}
+              className="h-6 w-32 border-0 bg-transparent p-0 font-mono text-xs tabular-nums shadow-none focus-visible:ring-0"
+            />
+          </div>
           <Button
-            variant="ghost"
-            onClick={() => {
-              setRange(EMPTY_RANGE);
-              void load(EMPTY_RANGE);
-            }}
+            className="rounded-full"
+            onClick={() => void load(range)}
             disabled={loading}
+            size="sm"
           >
-            Clear
+            {t('common.apply')}
           </Button>
-        )}
+          {(range.from || range.to) && (
+            <Button
+              variant="ghost"
+              className="rounded-full"
+              size="sm"
+              onClick={() => {
+                setRange(EMPTY_RANGE);
+                void load(EMPTY_RANGE);
+              }}
+              disabled={loading}
+            >
+              {t('common.clear')}
+            </Button>
+          )}
+        </div>
       </div>
 
       {error && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        <div className="relative overflow-hidden rounded-3xl bg-card px-4 py-3 pl-5 text-sm text-destructive">
+          <span aria-hidden className="absolute inset-y-0 left-0 w-1.5 bg-status-delayed" />
           {error}
         </div>
       )}
 
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <SummaryCard label="Active jobs" value={summary?.active_jobs} loading={loading} />
-        <SummaryCard label="Delayed jobs" value={summary?.delayed_jobs} loading={loading} />
-        <SummaryCard label="Completed jobs" value={summary?.completed_jobs} loading={loading} />
-        <SummaryCard
-          label="Unbilled additional work"
-          value={summary?.unbilled_additional_work}
+        <MetricCard
+          icon={Wrench}
+          label={t('dashboard.activeJobs')}
+          value={summary?.active_jobs ?? '—'}
+          loading={loading}
+          variant="accent"
+        />
+        <MetricCard
+          icon={AlertTriangle}
+          label={t('dashboard.delayedJobs')}
+          value={summary?.delayed_jobs ?? '—'}
+          loading={loading}
+        />
+        <MetricCard
+          icon={CheckCircle2}
+          label={t('dashboard.completedJobs')}
+          value={summary?.completed_jobs ?? '—'}
+          loading={loading}
+        />
+        <MetricCard
+          icon={Receipt}
+          label={t('dashboard.unbilledAdditionalWork')}
+          value={summary?.unbilled_additional_work ?? '—'}
           loading={loading}
         />
       </section>
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle>Avg. completion time</CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-semibold">
-            {loading ? '…' : formatHours(metrics?.avg_completion_time_hours ?? null)}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Average order value</CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-semibold">
-            {loading ? '…' : formatDecimal(metrics?.average_order_value ?? null)}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Repeat-customer rate</CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-semibold">
-            {loading ? '…' : formatPercent(metrics?.repeat_customer_rate ?? 0)}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Warranty cases</CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-semibold">
-            {loading ? '…' : (metrics?.warranty_case_count ?? '—')}
-          </CardContent>
-        </Card>
-        <Card className="md:col-span-2 lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Revenue per technician</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              '…'
-            ) : metrics && metrics.revenue_per_technician.length > 0 ? (
-              <ul className="flex flex-col gap-2 text-sm">
-                {metrics.revenue_per_technician.map((row) => (
-                  <li key={row.technician_id} className="flex items-center justify-between">
-                    <span>{row.technician_name}</span>
-                    <span className="font-medium">{formatDecimal(row.revenue)}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                No paid revenue recorded for this period yet.
-              </p>
-            )}
-          </CardContent>
-        </Card>
+        <InstrumentReadout
+          label={t('dashboard.avgCompletionTime')}
+          value={formatHours(metrics?.avg_completion_time_hours ?? null, t('dashboard.hoursUnit'))}
+          loading={loading}
+        />
+        <InstrumentReadout
+          label={t('dashboard.averageOrderValue')}
+          value={formatDecimal(metrics?.average_order_value ?? null)}
+          loading={loading}
+        />
+        <InstrumentReadout label={t('dashboard.repeatCustomerRate')} loading={loading}>
+          {loading ? (
+            <p className="mt-2 font-mono text-2xl font-semibold text-card-foreground">···</p>
+          ) : (
+            <div className="mt-2 flex items-center gap-3">
+              <div className="relative text-primary">
+                <PercentRing value={metrics?.repeat_customer_rate ?? 0} />
+                <span className="absolute inset-0 flex items-center justify-center font-mono text-[11px] font-semibold text-card-foreground">
+                  {formatPercent(metrics?.repeat_customer_rate ?? 0).replace('.0%', '%')}
+                </span>
+              </div>
+              <span className="text-xs text-muted-foreground">
+                {t('dashboard.ofJobsAreRepeatCustomers')}
+              </span>
+            </div>
+          )}
+        </InstrumentReadout>
+        <InstrumentReadout
+          label={t('dashboard.warrantyCases')}
+          value={metrics?.warranty_case_count ?? '—'}
+          loading={loading}
+        />
+        <InstrumentReadout label={t('dashboard.revenuePerTechnician')} loading={loading} wide>
+          <LollipopChart
+            loading={loading}
+            data={(metrics?.revenue_per_technician ?? []).map((row) => ({
+              id: row.technician_id,
+              label: row.technician_name,
+              value: Number(row.revenue),
+              formattedValue: formatDecimal(row.revenue),
+            }))}
+          />
+        </InstrumentReadout>
       </section>
     </div>
-  );
-}
-
-function SummaryCard({
-  label,
-  value,
-  loading,
-}: {
-  label: string;
-  value: number | undefined;
-  loading: boolean;
-}) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm text-zinc-500 dark:text-zinc-400">{label}</CardTitle>
-      </CardHeader>
-      <CardContent className="text-3xl font-semibold">{loading ? '…' : (value ?? '—')}</CardContent>
-    </Card>
   );
 }

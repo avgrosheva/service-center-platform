@@ -19,6 +19,8 @@ import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useLocale } from '@/lib/i18n/context';
+import type { TranslationKey } from '@/lib/i18n/context';
 import { ApiError, browserApiClient } from '@/lib/api-client';
 import { parseFieldErrors } from '@/lib/form-errors';
 import { useAuth } from '@/lib/auth';
@@ -30,17 +32,17 @@ import type {
 } from '@/types/api';
 
 const STATUS_STYLES: Record<AdditionalWorkStatus, string> = {
-  pending: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
-  approved: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
-  rejected: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
-  billed: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
+  pending: 'bg-status-pending/15 text-status-pending',
+  approved: 'bg-blue-100 text-blue-700',
+  rejected: 'bg-status-delayed/15 text-status-delayed',
+  billed: 'bg-status-completed/15 text-status-completed',
 };
 
-const STATUS_LABELS: Record<AdditionalWorkStatus, string> = {
-  pending: 'Pending',
-  approved: 'Approved',
-  rejected: 'Rejected',
-  billed: 'Billed',
+const STATUS_KEYS: Record<AdditionalWorkStatus, TranslationKey> = {
+  pending: 'additionalWorkStatus.pending',
+  approved: 'additionalWorkStatus.approved',
+  rejected: 'additionalWorkStatus.rejected',
+  billed: 'additionalWorkStatus.billed',
 };
 
 // Mirrors app/services/job_items_service.py's
@@ -60,6 +62,7 @@ export function JobAdditionalWork({
   jobId: string;
   onActivity?: () => void;
 }) {
+  const { t } = useLocale();
   const { user } = useAuth();
   const isTechnician = user?.role === 'technician';
 
@@ -82,21 +85,22 @@ export function JobAdditionalWork({
         if (!cancelled) setItems(data);
       } catch (err) {
         if (!cancelled)
-          setLoadError(err instanceof ApiError ? err.detail : 'Failed to load additional work.');
+          setLoadError(err instanceof ApiError ? err.detail : t('jobAdditionalWork.failedToLoad'));
       }
     })();
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobId]);
 
   const handleFlag = async (e: React.FormEvent) => {
     e.preventDefault();
     const errors: Record<string, string> = {};
-    if (!description.trim()) errors.description = 'Description is required.';
+    if (!description.trim()) errors.description = t('jobAdditionalWork.descriptionRequired');
     const priceNum = Number(price);
     if (!price.trim() || !Number.isFinite(priceNum) || priceNum <= 0) {
-      errors.price = 'Price must be greater than 0.';
+      errors.price = t('jobAdditionalWork.priceMustBePositive');
     }
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
@@ -120,7 +124,7 @@ export function JobAdditionalWork({
       if (err instanceof ApiError && err.kind === 'validation') {
         setFieldErrors(parseFieldErrors(err.detail));
       } else {
-        setActionError(err instanceof ApiError ? err.detail : 'Failed to flag additional work.');
+        setActionError(err instanceof ApiError ? err.detail : t('jobAdditionalWork.failedToFlag'));
       }
     } finally {
       setFlagging(false);
@@ -141,7 +145,7 @@ export function JobAdditionalWork({
       setItems((prev) => prev?.map((item) => (item.id === itemId ? updated : item)) ?? prev);
       onActivity?.();
     } catch (err) {
-      setActionError(err instanceof ApiError ? err.detail : 'Failed to update additional work.');
+      setActionError(err instanceof ApiError ? err.detail : t('jobAdditionalWork.failedToUpdate'));
     } finally {
       setUpdatingId(null);
     }
@@ -153,25 +157,25 @@ export function JobAdditionalWork({
       {actionError && <p className="text-sm text-destructive">{actionError}</p>}
 
       {items === null ? (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading…</p>
+        <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
       ) : items.length === 0 ? (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">No additional work flagged yet.</p>
+        <p className="text-sm text-muted-foreground">{t('jobAdditionalWork.noItemsYet')}</p>
       ) : (
         <ul className="flex flex-col gap-2">
           {items.map((item) => (
             <li
               key={item.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-800"
+              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-3 py-2 text-sm"
             >
               <div className="flex flex-col gap-0.5">
                 <span>{item.description}</span>
-                <span className="text-xs text-zinc-500 dark:text-zinc-400">{item.price}</span>
+                <span className="text-xs text-muted-foreground">{item.price}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span
                   className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[item.status]}`}
                 >
-                  {STATUS_LABELS[item.status]}
+                  {t(STATUS_KEYS[item.status])}
                 </span>
                 {!isTechnician &&
                   NEXT_STATUSES[item.status].map((next) => (
@@ -182,7 +186,7 @@ export function JobAdditionalWork({
                       disabled={updatingId === item.id}
                       onClick={() => void handleUpdateStatus(item.id, next)}
                     >
-                      {updatingId === item.id ? 'Saving…' : STATUS_LABELS[next]}
+                      {updatingId === item.id ? t('common.saving') : t(STATUS_KEYS[next])}
                     </Button>
                   ))}
               </div>
@@ -194,7 +198,7 @@ export function JobAdditionalWork({
       <form onSubmit={(e) => void handleFlag(e)} className="flex flex-wrap items-start gap-2">
         <div className="flex flex-col gap-1">
           <Input
-            placeholder="Description"
+            placeholder={t('jobAdditionalWork.descriptionPlaceholder')}
             value={description}
             aria-invalid={!!fieldErrors.description}
             onChange={(e) => setDescription(e.target.value)}
@@ -206,7 +210,7 @@ export function JobAdditionalWork({
         </div>
         <div className="flex flex-col gap-1">
           <Input
-            placeholder="Price"
+            placeholder={t('jobAdditionalWork.pricePlaceholder')}
             value={price}
             aria-invalid={!!fieldErrors.price}
             onChange={(e) => setPrice(e.target.value)}
@@ -215,7 +219,7 @@ export function JobAdditionalWork({
           {fieldErrors.price && <p className="text-xs text-destructive">{fieldErrors.price}</p>}
         </div>
         <Button type="submit" disabled={flagging}>
-          {flagging ? 'Flagging…' : 'Flag additional work'}
+          {flagging ? t('jobAdditionalWork.flagging') : t('jobAdditionalWork.flagAdditionalWork')}
         </Button>
       </form>
     </div>

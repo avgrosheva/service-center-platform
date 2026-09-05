@@ -48,6 +48,8 @@ async def list_jobs(
     assigned_technician_id: uuid.UUID | None = Query(default=None),
     scheduled_from: datetime | None = Query(default=None),
     scheduled_to: datetime | None = Query(default=None),
+    customer_id: uuid.UUID | None = Query(default=None),
+    equipment_id: uuid.UUID | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(_can_view_or_act_on_jobs),
 ) -> list:
@@ -59,6 +61,8 @@ async def list_jobs(
         assigned_technician_id=assigned_technician_id,
         scheduled_from=scheduled_from,
         scheduled_to=scheduled_to,
+        customer_id=customer_id,
+        equipment_id=equipment_id,
     )
 
 

@@ -123,6 +123,8 @@ All tables include `id` (UUID, primary key), `created_at`, `updated_at` unless n
 - `hashed_password`
 - `full_name`
 - `role` (enum: `owner`, `dispatcher`, `technician`)
+- `phone` (nullable — self-service only, not required at creation)
+- `avatar_s3_key` (nullable — S3 object key; a presigned view URL is generated from this at read time, never stored)
 - `is_active`
 - `created_at`
 
@@ -335,6 +337,11 @@ All routes are prefixed `/api/v1`. All (except `/auth/*`) require a JWT and are 
 | POST | `/auth/login` | Authenticate, return JWT |
 | POST | `/auth/refresh` | Refresh access token |
 | GET | `/auth/me` | Current user profile |
+| PATCH | `/auth/me` | Self-service profile update (name, email, phone) |
+| POST | `/auth/me/password` | Change own password (requires current password) |
+| POST | `/auth/me/avatar/upload-url` | Presigned upload URL for own avatar |
+| POST | `/auth/me/avatar` | Confirm avatar upload (validates the s3_key was actually issued to this user) |
+| DELETE | `/auth/me/avatar` | Remove own avatar |
 
 ### Users
 | Method | Route | Purpose |
@@ -342,7 +349,7 @@ All routes are prefixed `/api/v1`. All (except `/auth/*`) require a JWT and are 
 | GET | `/users` | List users in organization |
 | POST | `/users` | Create a user (owner/dispatcher only) |
 | GET | `/users/{id}` | Get user detail |
-| PATCH | `/users/{id}` | Update user (role, active status) |
+| PATCH | `/users/{id}` | Update user (role, active status, or reset their password — owner only) |
 | DELETE | `/users/{id}` | Deactivate user |
 
 ### Customers
@@ -365,7 +372,7 @@ All routes are prefixed `/api/v1`. All (except `/auth/*`) require a JWT and are 
 ### Jobs
 | Method | Route | Purpose |
 |---|---|---|
-| GET | `/jobs` | List jobs (filter by status, technician, date range) |
+| GET | `/jobs` | List jobs (filter by status, technician, date range, customer, equipment) |
 | POST | `/jobs` | Create job |
 | GET | `/jobs/{id}` | Job detail (full aggregate: timeline, photos, materials, additional work, payment, documents) |
 | PATCH | `/jobs/{id}` | Update job fields (issue, address, schedule) |
@@ -377,7 +384,8 @@ All routes are prefixed `/api/v1`. All (except `/auth/*`) require a JWT and are 
 ### Job Sub-resources
 | Method | Route | Purpose |
 |---|---|---|
-| POST | `/jobs/{id}/photos` | Upload photo (returns presigned upload or accepts multipart) |
+| POST | `/jobs/{id}/photos/upload-url` | Presigned upload URL for a job photo |
+| POST | `/jobs/{id}/photos` | Confirm photo upload (validates the s3_key was actually issued to this job) |
 | GET | `/jobs/{id}/photos` | List photos |
 | POST | `/jobs/{id}/materials` | Add material line item |
 | GET | `/jobs/{id}/materials` | List materials |
@@ -453,11 +461,18 @@ No need for a permissions table, policy engine, or RBAC framework — three hard
 
 This avoids routing binary uploads through the API server and keeps the backend stateless and light. A simpler direct-multipart-through-backend approach is acceptable as a fallback if presigned URLs add too much frontend complexity in week 1 — worth revisiting once the basic flow works.
 
+The same three-step flow is reused for a user's own avatar (`/auth/me/avatar/upload-url` → direct PUT → `/auth/me/avatar`), not just job photos.
+
+**Confirm-step validation:** step 3's confirm call takes a client-submitted `s3_key` — both implementations (photo confirm, avatar confirm) check that key against the exact pattern the upload-url step actually issued (organization/job id or organization/user id, matched by regex) before persisting it. Skipping this check lets an authenticated client confirm *any* key as its own — including another organization's — and get back a valid presigned view URL for it.
+
+**Presigned URL signing host:** the URL returned to the frontend is signed against a browser-reachable endpoint (`S3_PUBLIC_ENDPOINT_URL`), which is not necessarily the same host the backend itself uses to reach the bucket (`S3_ENDPOINT_URL`). Under Docker Compose locally these differ — the backend resolves the bucket at the Compose service name, but a link handed to the browser needs the host-mapped address instead.
+
 **Bucket structure (convention, not enforced by code):**
 ```
 {organization_id}/jobs/{job_id}/photos/{uuid}.jpg
 {organization_id}/jobs/{job_id}/documents/{uuid}.pdf
 {organization_id}/jobs/{job_id}/voice-notes/{uuid}.mp3
+{organization_id}/users/{user_id}/avatar/{uuid}.jpg
 ```
 
 ---

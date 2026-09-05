@@ -13,18 +13,21 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { useLocale } from '@/lib/i18n/context';
+import type { TranslationKey } from '@/lib/i18n/context';
 import { ApiError, browserApiClient } from '@/lib/api-client';
 import type { DocumentGenerateRequest, DocumentType, JobDocument } from '@/types/api';
 
-const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
-  job_report: 'Job report',
-  repair_certificate: 'Repair certificate',
+const DOCUMENT_TYPE_KEYS: Record<DocumentType, TranslationKey> = {
+  job_report: 'jobDocuments.jobReport',
+  repair_certificate: 'jobDocuments.repairCertificate',
 };
 
 const POLL_INTERVAL_MS = 1500;
 const MAX_POLL_ATTEMPTS = 8;
 
 export function JobDocuments({ jobId, onActivity }: { jobId: string; onActivity?: () => void }) {
+  const { t } = useLocale();
   const [documents, setDocuments] = useState<JobDocument[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [triggering, setTriggering] = useState<DocumentType | null>(null);
@@ -50,13 +53,14 @@ export function JobDocuments({ jobId, onActivity }: { jobId: string; onActivity?
         if (!cancelled) setDocuments(data);
       } catch (err) {
         if (!cancelled)
-          setLoadError(err instanceof ApiError ? err.detail : 'Failed to load documents.');
+          setLoadError(err instanceof ApiError ? err.detail : t('jobDocuments.failedToLoad'));
       }
     })();
     return () => {
       cancelled = true;
       isMountedRef.current = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobId]);
 
   const handleGenerate = async (type: DocumentType) => {
@@ -81,9 +85,9 @@ export function JobDocuments({ jobId, onActivity }: { jobId: string; onActivity?
           return;
         }
       }
-      setPollingNote('Still generating — check back in a moment and reload this section.');
+      setPollingNote(t('jobDocuments.stillGenerating'));
     } catch (err) {
-      setActionError(err instanceof ApiError ? err.detail : 'Failed to generate document.');
+      setActionError(err instanceof ApiError ? err.detail : t('jobDocuments.failedToGenerate'));
     } finally {
       setTriggering(null);
     }
@@ -95,16 +99,16 @@ export function JobDocuments({ jobId, onActivity }: { jobId: string; onActivity?
       {actionError && <p className="text-sm text-destructive">{actionError}</p>}
 
       {documents === null ? (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading…</p>
+        <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
       ) : documents.length === 0 ? (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">No documents generated yet.</p>
+        <p className="text-sm text-muted-foreground">{t('jobDocuments.noDocumentsYet')}</p>
       ) : (
         <ul className="flex flex-col gap-1 text-sm">
           {documents.map((doc) => (
             <li key={doc.id} className="flex items-center justify-between gap-2">
               <span>
-                {DOCUMENT_TYPE_LABELS[doc.type]}
-                <span className="ml-2 text-xs text-zinc-500 dark:text-zinc-400">
+                {t(DOCUMENT_TYPE_KEYS[doc.type])}
+                <span className="ml-2 text-xs text-muted-foreground">
                   {new Date(doc.generated_at).toLocaleString()}
                 </span>
               </span>
@@ -114,14 +118,14 @@ export function JobDocuments({ jobId, onActivity }: { jobId: string; onActivity?
                 rel="noreferrer"
                 className="text-sm underline"
               >
-                Download
+                {t('common.download')}
               </a>
             </li>
           ))}
         </ul>
       )}
 
-      {pollingNote && <p className="text-sm text-zinc-500 dark:text-zinc-400">{pollingNote}</p>}
+      {pollingNote && <p className="text-sm text-muted-foreground">{pollingNote}</p>}
 
       <div className="flex flex-wrap gap-2">
         <Button
@@ -130,7 +134,9 @@ export function JobDocuments({ jobId, onActivity }: { jobId: string; onActivity?
           disabled={triggering !== null}
           onClick={() => void handleGenerate('job_report')}
         >
-          {triggering === 'job_report' ? 'Generating…' : 'Generate report'}
+          {triggering === 'job_report'
+            ? t('jobDocuments.generating')
+            : t('jobDocuments.generateReport')}
         </Button>
         <Button
           type="button"
@@ -138,7 +144,9 @@ export function JobDocuments({ jobId, onActivity }: { jobId: string; onActivity?
           disabled={triggering !== null}
           onClick={() => void handleGenerate('repair_certificate')}
         >
-          {triggering === 'repair_certificate' ? 'Generating…' : 'Generate certificate'}
+          {triggering === 'repair_certificate'
+            ? t('jobDocuments.generating')
+            : t('jobDocuments.generateCertificate')}
         </Button>
       </div>
     </div>

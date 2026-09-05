@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { LogOut } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { LogOut, UserRound } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -15,6 +16,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { browserApiClient } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth';
+import { useLocale } from '@/lib/i18n/context';
 import type { Organization } from '@/types/api';
 
 function initials(fullName: string): string {
@@ -32,8 +34,10 @@ function initials(fullName: string): string {
  * logout) without an org name, and a transient hiccup here shouldn't
  * block the rest of the shell.
  */
-export function UserMenu() {
+export function UserMenu({ compact = false }: { compact?: boolean }) {
   const { user, logout } = useAuth();
+  const { t } = useLocale();
+  const router = useRouter();
   const [orgName, setOrgName] = useState<string | null>(null);
 
   useEffect(() => {
@@ -55,15 +59,25 @@ export function UserMenu() {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger render={<Button variant="ghost" className="h-auto gap-2 px-2 py-1.5" />}>
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-xs font-medium text-zinc-50 dark:bg-zinc-50 dark:text-zinc-900">
-          {initials(user.full_name)}
+      <DropdownMenuTrigger
+        render={
+          <Button
+            variant="ghost"
+            className={compact ? 'h-auto rounded-full p-0' : 'h-auto gap-2 px-2 py-1.5'}
+          />
+        }
+      >
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary font-mono text-xs font-medium tabular-nums text-primary-foreground">
+          {user.avatar_url ? (
+            // eslint-disable-next-line @next/next/no-img-element -- presigned S3/MinIO URL, not a static/local asset next/image can optimize
+            <img src={user.avatar_url} alt="" className="h-full w-full object-cover" />
+          ) : (
+            initials(user.full_name)
+          )}
         </span>
-        <span className="hidden flex-col items-start text-left sm:flex">
+        <span className={compact ? 'hidden' : 'hidden flex-col items-start text-left sm:flex'}>
           <span className="text-sm font-medium leading-tight">{user.full_name}</span>
-          <span className="text-xs leading-tight text-zinc-500 dark:text-zinc-400">
-            {orgName ?? ' '}
-          </span>
+          <span className="text-xs leading-tight text-muted-foreground">{orgName ?? ' '}</span>
         </span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
@@ -71,9 +85,13 @@ export function UserMenu() {
           <DropdownMenuLabel>{orgName ?? user.email}</DropdownMenuLabel>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => router.push('/profile')}>
+          <UserRound className="h-4 w-4" />
+          {t('nav.profile')}
+        </DropdownMenuItem>
         <DropdownMenuItem onClick={() => void logout()} variant="destructive">
           <LogOut className="h-4 w-4" />
-          Log out
+          {t('nav.logOut')}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -32,16 +32,27 @@
  */
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { RequireRole } from '@/components/shell/require-role';
-import { JOB_STATUS_LABELS, JobStatusBadge } from '@/components/jobs/job-status-badge';
+import { JobStatusBadge } from '@/components/jobs/job-status-badge';
+import { useLocale } from '@/lib/i18n/context';
 import { ApiError, browserApiClient } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth';
 import type { Job, JobStatus, User } from '@/types/api';
 
-const ALL_STATUSES = Object.keys(JOB_STATUS_LABELS) as JobStatus[];
+const ALL_STATUSES: JobStatus[] = [
+  'new',
+  'assigned',
+  'en_route',
+  'in_progress',
+  'awaiting_parts',
+  'awaiting_approval',
+  'completed',
+  'cancelled',
+];
 
 const SELECT_CLASS =
   'h-8 rounded-lg border border-input bg-transparent px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30';
@@ -55,6 +66,8 @@ export default function JobsPage() {
 }
 
 function JobsContent() {
+  const { t } = useLocale();
+  const router = useRouter();
   const { user } = useAuth();
   const isTechnician = user?.role === 'technician';
 
@@ -98,10 +111,11 @@ function JobsContent() {
       });
       setJobs(data);
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : 'Failed to load jobs.');
+      setError(err instanceof ApiError ? err.detail : t('jobs.failedToLoad'));
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, technicianFilter, scheduledFrom, scheduledTo, isTechnician]);
 
   // Fires on mount and again on every filter change — see module docstring
@@ -120,16 +134,19 @@ function JobsContent() {
 
   if (isTechnician) {
     return (
-      <div className="flex flex-col gap-4">
+      <div className="mx-auto flex max-w-6xl flex-col gap-4">
+        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+          {t('jobs.myTitle')}
+        </h1>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as JobStatus | '')}
           className="h-11 w-full rounded-lg border border-input bg-transparent px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
         >
-          <option value="">All statuses</option>
+          <option value="">{t('jobs.allStatuses')}</option>
           {ALL_STATUSES.map((s) => (
             <option key={s} value={s}>
-              {JOB_STATUS_LABELS[s]}
+              {t(`jobStatus.${s}`)}
             </option>
           ))}
         </select>
@@ -141,21 +158,21 @@ function JobsContent() {
         )}
 
         {loading ? (
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading…</p>
+          <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
         ) : !jobs || jobs.length === 0 ? (
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">No jobs match this filter.</p>
+          <p className="text-sm text-muted-foreground">{t('jobs.noJobsMatchFilter')}</p>
         ) : (
           <div className="flex flex-col gap-3">
             {jobs.map((job) => (
               <Link
                 key={job.id}
                 href={`/jobs/${job.id}`}
-                className="flex flex-col gap-2 rounded-xl border border-zinc-200 p-4 active:bg-zinc-50 dark:border-zinc-800 dark:active:bg-zinc-900"
+                className="flex flex-col gap-2 rounded-3xl bg-card p-4 active:bg-muted"
               >
                 <div className="flex items-center justify-between gap-2">
                   <JobStatusBadge status={job.status} />
                   {job.scheduled_at && (
-                    <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                    <span className="text-xs text-muted-foreground">
                       {new Date(job.scheduled_at).toLocaleString(undefined, {
                         month: 'short',
                         day: 'numeric',
@@ -166,7 +183,7 @@ function JobsContent() {
                   )}
                 </div>
                 <p className="text-base font-medium">{job.reported_issue}</p>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400">{job.address_snapshot}</p>
+                <p className="text-sm text-muted-foreground">{job.address_snapshot}</p>
               </Link>
             ))}
           </div>
@@ -176,14 +193,12 @@ function JobsContent() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="mx-auto flex max-w-6xl flex-col gap-4">
+      <h1 className="text-3xl font-semibold tracking-tight text-foreground">{t('jobs.title')}</h1>
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex flex-col gap-1">
-          <label
-            className="text-xs font-medium text-zinc-500 dark:text-zinc-400"
-            htmlFor="status-filter"
-          >
-            Status
+          <label className="text-xs font-medium text-muted-foreground" htmlFor="status-filter">
+            {t('jobs.status')}
           </label>
           <select
             id="status-filter"
@@ -191,10 +206,10 @@ function JobsContent() {
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as JobStatus | '')}
           >
-            <option value="">All statuses</option>
+            <option value="">{t('jobs.allStatuses')}</option>
             {ALL_STATUSES.map((s) => (
               <option key={s} value={s}>
-                {JOB_STATUS_LABELS[s]}
+                {t(`jobStatus.${s}`)}
               </option>
             ))}
           </select>
@@ -202,11 +217,8 @@ function JobsContent() {
 
         {!isTechnician && (
           <div className="flex flex-col gap-1">
-            <label
-              className="text-xs font-medium text-zinc-500 dark:text-zinc-400"
-              htmlFor="tech-filter"
-            >
-              Technician
+            <label className="text-xs font-medium text-muted-foreground" htmlFor="tech-filter">
+              {t('jobs.technician')}
             </label>
             <select
               id="tech-filter"
@@ -214,7 +226,7 @@ function JobsContent() {
               value={technicianFilter}
               onChange={(e) => setTechnicianFilter(e.target.value)}
             >
-              <option value="">All technicians</option>
+              <option value="">{t('jobs.allTechnicians')}</option>
               {technicians.map((tech) => (
                 <option key={tech.id} value={tech.id}>
                   {tech.full_name}
@@ -225,11 +237,8 @@ function JobsContent() {
         )}
 
         <div className="flex flex-col gap-1">
-          <label
-            className="text-xs font-medium text-zinc-500 dark:text-zinc-400"
-            htmlFor="scheduled-from"
-          >
-            Scheduled from
+          <label className="text-xs font-medium text-muted-foreground" htmlFor="scheduled-from">
+            {t('jobs.scheduledFrom')}
           </label>
           <input
             id="scheduled-from"
@@ -241,11 +250,8 @@ function JobsContent() {
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label
-            className="text-xs font-medium text-zinc-500 dark:text-zinc-400"
-            htmlFor="scheduled-to"
-          >
-            Scheduled to
+          <label className="text-xs font-medium text-muted-foreground" htmlFor="scheduled-to">
+            {t('jobs.scheduledTo')}
           </label>
           <input
             id="scheduled-to"
@@ -259,7 +265,7 @@ function JobsContent() {
 
         {!isTechnician && (
           <Button render={<Link href="/jobs/new" />} nativeButton={false} className="ml-auto">
-            New job
+            {t('jobs.newJob')}
           </Button>
         )}
       </div>
@@ -271,26 +277,27 @@ function JobsContent() {
       )}
 
       {loading ? (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading…</p>
+        <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
       ) : !jobs || jobs.length === 0 ? (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">No jobs match these filters.</p>
+        <p className="text-sm text-muted-foreground">{t('jobs.noJobsMatchFilters')}</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
+        <div className="overflow-x-auto rounded-3xl bg-card">
           <table className="w-full min-w-[720px] text-left text-sm">
-            <thead className="border-b border-zinc-200 text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+            <thead className="border-b border-border text-xs text-muted-foreground">
               <tr>
-                <th className="px-4 py-2 font-medium">Status</th>
-                <th className="px-4 py-2 font-medium">Reported issue</th>
-                <th className="px-4 py-2 font-medium">Address</th>
-                <th className="px-4 py-2 font-medium">Scheduled</th>
-                <th className="px-4 py-2 font-medium">Technician</th>
+                <th className="px-4 py-2 font-medium">{t('jobs.tableStatus')}</th>
+                <th className="px-4 py-2 font-medium">{t('jobs.tableReportedIssue')}</th>
+                <th className="px-4 py-2 font-medium">{t('jobs.tableAddress')}</th>
+                <th className="px-4 py-2 font-medium">{t('jobs.tableScheduled')}</th>
+                <th className="px-4 py-2 font-medium">{t('jobs.tableTechnician')}</th>
               </tr>
             </thead>
             <tbody>
               {jobs.map((job) => (
                 <tr
                   key={job.id}
-                  className="border-b border-zinc-100 last:border-0 dark:border-zinc-900"
+                  onClick={() => router.push(`/jobs/${job.id}`)}
+                  className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/50"
                 >
                   <td className="px-4 py-2">
                     <Link href={`/jobs/${job.id}`}>
@@ -302,13 +309,13 @@ function JobsContent() {
                       {job.reported_issue}
                     </Link>
                   </td>
-                  <td className="max-w-xs truncate px-4 py-2 text-zinc-600 dark:text-zinc-400">
+                  <td className="max-w-xs truncate px-4 py-2 text-muted-foreground">
                     {job.address_snapshot}
                   </td>
-                  <td className="px-4 py-2 text-zinc-600 dark:text-zinc-400">
+                  <td className="px-4 py-2 text-muted-foreground">
                     {job.scheduled_at ? new Date(job.scheduled_at).toLocaleString() : '—'}
                   </td>
-                  <td className="px-4 py-2 text-zinc-600 dark:text-zinc-400">
+                  <td className="px-4 py-2 text-muted-foreground">
                     {job.assigned_technician_id
                       ? (technicianNameById[job.assigned_technician_id] ?? '—')
                       : '—'}

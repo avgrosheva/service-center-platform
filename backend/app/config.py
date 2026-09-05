@@ -43,6 +43,14 @@ class Settings(BaseSettings):
     #     (Milestone 14) — both optional at the Settings level since a
     #     deployment that never touches those features doesn't need them. ---
     s3_endpoint_url: str | None = None
+    # The host a presigned URL is signed against — must be reachable by
+    # whatever is handed that URL (the browser, uploading/viewing photos
+    # directly), which in Docker Compose is not the same host as
+    # `s3_endpoint_url` (the container-network name the backend itself
+    # uses to reach MinIO). Falls back to `s3_endpoint_url` when unset,
+    # which is correct for any deployment where the two coincide (a real
+    # S3-compatible provider, or the backend running outside Docker).
+    s3_public_endpoint_url: str | None = None
     s3_access_key: str | None = None
     s3_secret_key: str | None = None
     s3_bucket_name: str | None = None

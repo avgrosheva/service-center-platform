@@ -8,3 +8,7 @@ venv/
 .ruff_cache/
 dist/
 build/
+.impeccable/
+.claude/
+.agents/
+skills-lock.json

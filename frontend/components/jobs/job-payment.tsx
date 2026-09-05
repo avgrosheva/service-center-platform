@@ -19,6 +19,7 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useLocale } from '@/lib/i18n/context';
 import { ApiError, browserApiClient } from '@/lib/api-client';
 import type { Payment, PaymentMethod, PaymentStatus, PaymentUpsertRequest } from '@/types/api';
 
@@ -26,6 +27,7 @@ const SELECT_CLASS =
   'h-8 rounded-lg border border-input bg-transparent px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30';
 
 export function JobPayment({ jobId }: { jobId: string }) {
+  const { t } = useLocale();
   const [payment, setPayment] = useState<Payment | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -50,7 +52,7 @@ export function JobPayment({ jobId }: { jobId: string }) {
       } catch (err) {
         if (cancelled) return;
         if (!(err instanceof ApiError && err.kind === 'not_found')) {
-          setLoadError(err instanceof ApiError ? err.detail : 'Failed to load payment.');
+          setLoadError(err instanceof ApiError ? err.detail : t('jobPayment.failedToLoad'));
         }
       } finally {
         if (!cancelled) setLoaded(true);
@@ -59,13 +61,14 @@ export function JobPayment({ jobId }: { jobId: string }) {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobId]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     const amountNum = Number(amount);
     if (!amount.trim() || !Number.isFinite(amountNum) || amountNum <= 0) {
-      setFieldError('Amount must be greater than 0.');
+      setFieldError(t('jobPayment.amountMustBePositive'));
       return;
     }
 
@@ -81,14 +84,14 @@ export function JobPayment({ jobId }: { jobId: string }) {
       setAmount(updated.amount);
       setStatus(updated.status);
     } catch (err) {
-      setFieldError(err instanceof ApiError ? err.detail : 'Failed to save payment.');
+      setFieldError(err instanceof ApiError ? err.detail : t('jobPayment.failedToSave'));
     } finally {
       setSaving(false);
     }
   };
 
   if (!loaded) {
-    return <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading…</p>;
+    return <p className="text-sm text-muted-foreground">{t('common.loading')}</p>;
   }
 
   if (loadError) {
@@ -98,7 +101,7 @@ export function JobPayment({ jobId }: { jobId: string }) {
   return (
     <form onSubmit={(e) => void handleSave(e)} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">
-        <Label htmlFor="payment-amount">Amount</Label>
+        <Label htmlFor="payment-amount">{t('jobPayment.amount')}</Label>
         <Input
           id="payment-amount"
           value={amount}
@@ -108,40 +111,44 @@ export function JobPayment({ jobId }: { jobId: string }) {
         />
       </div>
       <div className="flex flex-col gap-1">
-        <Label htmlFor="payment-method">Method</Label>
+        <Label htmlFor="payment-method">{t('jobPayment.method')}</Label>
         <select
           id="payment-method"
           value={method}
           onChange={(e) => setMethod(e.target.value as PaymentMethod)}
           className={SELECT_CLASS}
         >
-          <option value="cash">Cash</option>
-          <option value="card">Card</option>
-          <option value="bank_transfer">Bank transfer</option>
-          <option value="other">Other</option>
+          <option value="cash">{t('jobPayment.cash')}</option>
+          <option value="card">{t('jobPayment.card')}</option>
+          <option value="bank_transfer">{t('jobPayment.bankTransfer')}</option>
+          <option value="other">{t('jobPayment.other')}</option>
         </select>
       </div>
       <div className="flex flex-col gap-1">
-        <Label htmlFor="payment-status">Status</Label>
+        <Label htmlFor="payment-status">{t('jobPayment.status')}</Label>
         <select
           id="payment-status"
           value={status}
           onChange={(e) => setStatus(e.target.value as PaymentStatus)}
           className={SELECT_CLASS}
         >
-          <option value="unpaid">Unpaid</option>
-          <option value="paid">Paid</option>
+          <option value="unpaid">{t('jobPayment.unpaid')}</option>
+          <option value="paid">{t('jobPayment.paid')}</option>
         </select>
       </div>
       {payment?.paid_at && (
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">
-          Paid at: {new Date(payment.paid_at).toLocaleString()}
+        <p className="text-xs text-muted-foreground">
+          {t('jobPayment.paidAt', { date: new Date(payment.paid_at).toLocaleString() })}
         </p>
       )}
       {fieldError && <p className="text-sm text-destructive">{fieldError}</p>}
       <div>
         <Button type="submit" disabled={saving}>
-          {saving ? 'Saving…' : payment ? 'Update payment' : 'Save payment'}
+          {saving
+            ? t('common.saving')
+            : payment
+              ? t('jobPayment.updatePayment')
+              : t('jobPayment.savePayment')}
         </Button>
       </div>
     </form>

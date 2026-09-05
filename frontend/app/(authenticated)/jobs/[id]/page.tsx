@@ -34,7 +34,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RequireRole } from '@/components/shell/require-role';
-import { JOB_STATUS_LABELS, JobStatusBadge } from '@/components/jobs/job-status-badge';
+import { JobStatusBadge } from '@/components/jobs/job-status-badge';
 import {
   JOB_STATUS_FORWARD_TRANSITIONS,
   canCancelFromStatus,
@@ -45,6 +45,7 @@ import { JobMaterials } from '@/components/jobs/job-materials';
 import { JobAdditionalWork } from '@/components/jobs/job-additional-work';
 import { JobPayment } from '@/components/jobs/job-payment';
 import { JobDocuments } from '@/components/jobs/job-documents';
+import { useLocale } from '@/lib/i18n/context';
 import { ApiError, browserApiClient } from '@/lib/api-client';
 import { parseFieldErrors } from '@/lib/form-errors';
 import { useAuth } from '@/lib/auth';
@@ -74,6 +75,7 @@ export default function JobDetailPage() {
 }
 
 function JobDetailContent() {
+  const { t } = useLocale();
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const isTechnician = user?.role === 'technician';
@@ -111,8 +113,9 @@ function JobDetailContent() {
       const data = await browserApiClient<JobStatusHistoryEntry[]>(`/jobs/${id}/timeline`);
       setTimeline(data);
     } catch (err) {
-      setTimelineError(err instanceof ApiError ? err.detail : 'Failed to load timeline.');
+      setTimelineError(err instanceof ApiError ? err.detail : t('jobDetail.failedToLoadTimeline'));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   useEffect(() => {
@@ -128,7 +131,7 @@ function JobDetailContent() {
         } else if (err instanceof ApiError && err.kind === 'forbidden') {
           setForbidden(true);
         } else {
-          setLoadError(err instanceof ApiError ? err.detail : 'Failed to load job.');
+          setLoadError(err instanceof ApiError ? err.detail : t('jobDetail.failedToLoadJob'));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -137,6 +140,7 @@ function JobDetailContent() {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   // Wrapped in its own inline async IIFE (rather than `void
@@ -190,8 +194,10 @@ function JobDetailContent() {
   const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     const errors: Record<string, string> = {};
-    if (!editValues.reported_issue.trim()) errors.reported_issue = 'Reported issue is required.';
-    if (!editValues.address_snapshot.trim()) errors.address_snapshot = 'Address is required.';
+    if (!editValues.reported_issue.trim())
+      errors.reported_issue = t('jobDetail.reportedIssueRequired');
+    if (!editValues.address_snapshot.trim())
+      errors.address_snapshot = t('jobDetail.addressRequired');
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       return;
@@ -228,7 +234,7 @@ function JobDetailContent() {
           setFormError(err.detail);
         }
       } else {
-        setFormError(err instanceof ApiError ? err.detail : 'Failed to save job.');
+        setFormError(err instanceof ApiError ? err.detail : t('jobDetail.failedToSaveJob'));
       }
     } finally {
       setSavingEdit(false);
@@ -248,7 +254,7 @@ function JobDetailContent() {
       setSelectedTechForAssign('');
       void reloadTimeline();
     } catch (err) {
-      setActionError(err instanceof ApiError ? err.detail : 'Failed to assign technician.');
+      setActionError(err instanceof ApiError ? err.detail : t('jobDetail.failedToAssign'));
     } finally {
       setAssigning(false);
     }
@@ -265,7 +271,7 @@ function JobDetailContent() {
       setJob(updated);
       void reloadTimeline();
     } catch (err) {
-      setActionError(err instanceof ApiError ? err.detail : 'Failed to change status.');
+      setActionError(err instanceof ApiError ? err.detail : t('jobDetail.failedToChangeStatus'));
     } finally {
       setChangingStatus(null);
     }
@@ -280,22 +286,22 @@ function JobDetailContent() {
       setConfirmCancel(false);
       void reloadTimeline();
     } catch (err) {
-      setActionError(err instanceof ApiError ? err.detail : 'Failed to cancel job.');
+      setActionError(err instanceof ApiError ? err.detail : t('jobDetail.failedToCancelJob'));
     } finally {
       setCancelling(false);
     }
   };
 
   if (loading) {
-    return <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading…</p>;
+    return <p className="text-sm text-muted-foreground">{t('common.loading')}</p>;
   }
 
   if (notFound) {
     return (
       <div className="flex flex-col gap-3">
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">Job not found.</p>
+        <p className="text-sm text-muted-foreground">{t('jobDetail.jobNotFound')}</p>
         <Link href="/jobs" className="text-sm underline">
-          Back to jobs
+          {t('jobDetail.backToJobs')}
         </Link>
       </div>
     );
@@ -304,31 +310,31 @@ function JobDetailContent() {
   if (forbidden) {
     return (
       <div className="flex flex-col gap-3">
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          This job isn&apos;t assigned to you, so you don&apos;t have access to it.
-        </p>
+        <p className="text-sm text-muted-foreground">{t('jobDetail.forbiddenMessage')}</p>
         <Link href="/jobs" className="text-sm underline">
-          Back to jobs
+          {t('jobDetail.backToJobs')}
         </Link>
       </div>
     );
   }
 
   if (loadError || !job) {
-    return <p className="text-sm text-destructive">{loadError ?? 'Failed to load job.'}</p>;
+    return (
+      <p className="text-sm text-destructive">{loadError ?? t('jobDetail.failedToLoadJob')}</p>
+    );
   }
 
   const nextStatuses = JOB_STATUS_FORWARD_TRANSITIONS[job.status];
 
   return (
-    <div className="flex flex-col gap-4">
-      <Link href="/jobs" className="text-sm text-zinc-500 hover:underline dark:text-zinc-400">
-        ← Back to jobs
+    <div className="mx-auto flex max-w-6xl flex-col gap-4">
+      <Link href="/jobs" className="text-sm text-muted-foreground hover:underline">
+        {t('jobDetail.backToJobs')}
       </Link>
 
-      <Card className="max-w-lg">
+      <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Job</CardTitle>
+          <CardTitle>{t('jobDetail.job')}</CardTitle>
           <JobStatusBadge status={job.status} />
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
@@ -337,7 +343,7 @@ function JobDetailContent() {
           {editing ? (
             <form onSubmit={(e) => void handleSaveEdit(e)} className="flex flex-col gap-4">
               <div className="flex flex-col gap-1">
-                <Label htmlFor="reported_issue">Reported issue</Label>
+                <Label htmlFor="reported_issue">{t('jobDetail.reportedIssue')}</Label>
                 <textarea
                   id="reported_issue"
                   value={editValues.reported_issue}
@@ -351,7 +357,7 @@ function JobDetailContent() {
                 )}
               </div>
               <div className="flex flex-col gap-1">
-                <Label htmlFor="address_snapshot">Address</Label>
+                <Label htmlFor="address_snapshot">{t('jobDetail.address')}</Label>
                 <Input
                   id="address_snapshot"
                   value={editValues.address_snapshot}
@@ -365,7 +371,7 @@ function JobDetailContent() {
                 )}
               </div>
               <div className="flex flex-col gap-1">
-                <Label htmlFor="scheduled_at">Scheduled at</Label>
+                <Label htmlFor="scheduled_at">{t('jobDetail.scheduledAt')}</Label>
                 <Input
                   id="scheduled_at"
                   type="datetime-local"
@@ -375,7 +381,7 @@ function JobDetailContent() {
               </div>
               <div className="flex gap-2">
                 <Button type="submit" disabled={savingEdit}>
-                  {savingEdit ? 'Saving…' : 'Save'}
+                  {savingEdit ? t('common.saving') : t('common.save')}
                 </Button>
                 <Button
                   type="button"
@@ -383,30 +389,36 @@ function JobDetailContent() {
                   onClick={() => setEditing(false)}
                   disabled={savingEdit}
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
               </div>
             </form>
           ) : (
             <>
               <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
-                <dt className="font-medium text-zinc-500 dark:text-zinc-400">Reported issue</dt>
+                <dt className="font-medium text-muted-foreground">
+                  {t('jobDetail.reportedIssue')}
+                </dt>
                 <dd className="whitespace-pre-wrap">{job.reported_issue}</dd>
-                <dt className="font-medium text-zinc-500 dark:text-zinc-400">Address</dt>
+                <dt className="font-medium text-muted-foreground">{t('jobDetail.address')}</dt>
                 <dd>{job.address_snapshot}</dd>
-                <dt className="font-medium text-zinc-500 dark:text-zinc-400">Scheduled</dt>
+                <dt className="font-medium text-muted-foreground">{t('jobDetail.scheduled')}</dt>
                 <dd>{job.scheduled_at ? new Date(job.scheduled_at).toLocaleString() : '—'}</dd>
-                <dt className="font-medium text-zinc-500 dark:text-zinc-400">Technician</dt>
+                <dt className="font-medium text-muted-foreground">{t('jobDetail.technician')}</dt>
                 <dd>
                   {job.assigned_technician_id
                     ? (userNameById[job.assigned_technician_id] ?? job.assigned_technician_id)
-                    : 'Unassigned'}
+                    : t('jobDetail.unassigned')}
                 </dd>
-                <dt className="font-medium text-zinc-500 dark:text-zinc-400">Warranty claim</dt>
-                <dd>{job.is_warranty_claim ? 'Yes' : 'No'}</dd>
+                <dt className="font-medium text-muted-foreground">
+                  {t('jobDetail.warrantyClaim')}
+                </dt>
+                <dd>{job.is_warranty_claim ? t('common.yes') : t('common.no')}</dd>
                 {job.completed_at && (
                   <>
-                    <dt className="font-medium text-zinc-500 dark:text-zinc-400">Completed</dt>
+                    <dt className="font-medium text-muted-foreground">
+                      {t('jobDetail.completed')}
+                    </dt>
                     <dd>{new Date(job.completed_at).toLocaleString()}</dd>
                   </>
                 )}
@@ -414,7 +426,7 @@ function JobDetailContent() {
               {!isTechnician && (
                 <div>
                   <Button variant="outline" onClick={startEditing}>
-                    Edit
+                    {t('common.edit')}
                   </Button>
                 </div>
               )}
@@ -423,16 +435,16 @@ function JobDetailContent() {
         </CardContent>
       </Card>
 
-      <Card className="max-w-lg">
+      <Card>
         <CardHeader>
-          <CardTitle>Actions</CardTitle>
+          <CardTitle>{t('jobDetail.actions')}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           {actionError && <p className="text-sm text-destructive">{actionError}</p>}
 
           {!isTechnician && job.status === 'new' && (
             <div className="flex flex-col gap-1">
-              <Label htmlFor="assign-technician">Assign technician</Label>
+              <Label htmlFor="assign-technician">{t('jobDetail.assignTechnician')}</Label>
               <div className="flex gap-2">
                 <select
                   id="assign-technician"
@@ -440,7 +452,7 @@ function JobDetailContent() {
                   onChange={(e) => setSelectedTechForAssign(e.target.value)}
                   className="h-8 flex-1 rounded-lg border border-input bg-transparent px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
                 >
-                  <option value="">Select a technician…</option>
+                  <option value="">{t('jobDetail.selectATechnician')}</option>
                   {technicians.map((tech) => (
                     <option key={tech.id} value={tech.id}>
                       {tech.full_name}
@@ -451,7 +463,7 @@ function JobDetailContent() {
                   onClick={() => void handleAssign()}
                   disabled={!selectedTechForAssign || assigning}
                 >
-                  {assigning ? 'Assigning…' : 'Assign'}
+                  {assigning ? t('jobDetail.assigning') : t('jobDetail.assign')}
                 </Button>
               </div>
             </div>
@@ -459,7 +471,7 @@ function JobDetailContent() {
 
           {nextStatuses.length > 0 && (
             <div className="flex flex-col gap-1">
-              <Label>Move to</Label>
+              <Label>{t('jobDetail.moveTo')}</Label>
               {/* Milestone F13: stacked, full-width, larger-height buttons
                   for a technician — this is the control they tap
                   repeatedly out in the field, one-handed; owner/dispatcher
@@ -474,7 +486,7 @@ function JobDetailContent() {
                     disabled={changingStatus !== null}
                     className={isTechnician ? 'h-12 w-full text-base' : undefined}
                   >
-                    {changingStatus === status ? 'Saving…' : JOB_STATUS_LABELS[status]}
+                    {changingStatus === status ? t('common.saving') : t(`jobStatus.${status}`)}
                   </Button>
                 ))}
               </div>
@@ -483,7 +495,7 @@ function JobDetailContent() {
 
           {!isTechnician && canCancelFromStatus(job.status) && (
             <div className="flex flex-col gap-1">
-              <Label>Cancel</Label>
+              <Label>{t('jobDetail.cancel')}</Label>
               {confirmCancel ? (
                 <div className="flex gap-2">
                   <Button
@@ -491,20 +503,20 @@ function JobDetailContent() {
                     onClick={() => void handleCancel()}
                     disabled={cancelling}
                   >
-                    {cancelling ? 'Cancelling…' : 'Confirm cancel'}
+                    {cancelling ? t('jobDetail.cancelling') : t('jobDetail.confirmCancel')}
                   </Button>
                   <Button
                     variant="ghost"
                     onClick={() => setConfirmCancel(false)}
                     disabled={cancelling}
                   >
-                    Never mind
+                    {t('common.neverMind')}
                   </Button>
                 </div>
               ) : (
                 <div>
                   <Button variant="destructive" onClick={() => setConfirmCancel(true)}>
-                    Cancel job
+                    {t('jobDetail.cancelJob')}
                   </Button>
                 </div>
               )}
@@ -514,34 +526,32 @@ function JobDetailContent() {
           {nextStatuses.length === 0 &&
             !canCancelFromStatus(job.status) &&
             job.status !== 'new' && (
-              <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                This job is in a final state — no further actions available.
-              </p>
+              <p className="text-sm text-muted-foreground">{t('jobDetail.finalStateMessage')}</p>
             )}
         </CardContent>
       </Card>
 
-      <Card className="max-w-lg">
+      <Card>
         <CardHeader>
-          <CardTitle>Photos</CardTitle>
+          <CardTitle>{t('jobDetail.photos')}</CardTitle>
         </CardHeader>
         <CardContent>
           <JobPhotos jobId={id} onActivity={() => void reloadTimeline()} large={isTechnician} />
         </CardContent>
       </Card>
 
-      <Card className="max-w-lg">
+      <Card>
         <CardHeader>
-          <CardTitle>Materials</CardTitle>
+          <CardTitle>{t('jobDetail.materials')}</CardTitle>
         </CardHeader>
         <CardContent>
           <JobMaterials jobId={id} onActivity={() => void reloadTimeline()} />
         </CardContent>
       </Card>
 
-      <Card className="max-w-lg">
+      <Card>
         <CardHeader>
-          <CardTitle>Additional work</CardTitle>
+          <CardTitle>{t('jobDetail.additionalWork')}</CardTitle>
         </CardHeader>
         <CardContent>
           <JobAdditionalWork jobId={id} onActivity={() => void reloadTimeline()} />
@@ -549,9 +559,9 @@ function JobDetailContent() {
       </Card>
 
       {!isTechnician && (
-        <Card className="max-w-lg">
+        <Card>
           <CardHeader>
-            <CardTitle>Payment</CardTitle>
+            <CardTitle>{t('jobDetail.payment')}</CardTitle>
           </CardHeader>
           <CardContent>
             <JobPayment jobId={id} />
@@ -559,24 +569,24 @@ function JobDetailContent() {
         </Card>
       )}
 
-      <Card className="max-w-lg">
+      <Card>
         <CardHeader>
-          <CardTitle>Documents</CardTitle>
+          <CardTitle>{t('jobDetail.documents')}</CardTitle>
         </CardHeader>
         <CardContent>
           <JobDocuments jobId={id} onActivity={() => void reloadTimeline()} />
         </CardContent>
       </Card>
 
-      <Card className="max-w-lg">
+      <Card>
         <CardHeader>
-          <CardTitle>Activity timeline</CardTitle>
+          <CardTitle>{t('jobDetail.activityTimeline')}</CardTitle>
         </CardHeader>
         <CardContent>
           {timelineError ? (
             <p className="text-sm text-destructive">{timelineError}</p>
           ) : timeline === null ? (
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading…</p>
+            <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
           ) : (
             <JobTimeline entries={timeline} actorNameById={userNameById} />
           )}

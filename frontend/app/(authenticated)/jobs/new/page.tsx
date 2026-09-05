@@ -36,6 +36,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RequireRole } from '@/components/shell/require-role';
+import { useLocale } from '@/lib/i18n/context';
 import { ApiError, browserApiClient } from '@/lib/api-client';
 import { parseFieldErrors } from '@/lib/form-errors';
 import type { Customer, Equipment, Job, JobCreateRequest } from '@/types/api';
@@ -54,6 +55,7 @@ export default function NewJobPage() {
 }
 
 function NewJobContent() {
+  const { t } = useLocale();
   const router = useRouter();
 
   const [customerSearch, setCustomerSearch] = useState('');
@@ -112,14 +114,23 @@ function NewJobContent() {
 
   const selectedEquipment = equipmentList?.find((e) => e.id === selectedEquipmentId) ?? null;
 
+  const clearFieldError = (name: string) => {
+    setFieldErrors((prev) => {
+      if (!(name in prev)) return prev;
+      const next = { ...prev };
+      delete next[name];
+      return next;
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const errors: Record<string, string> = {};
-    if (!selectedCustomer) errors.customer = 'Select a customer.';
-    if (!reportedIssue.trim()) errors.reported_issue = 'Reported issue is required.';
+    if (!selectedCustomer) errors.customer = t('jobNew.selectCustomer');
+    if (!reportedIssue.trim()) errors.reported_issue = t('jobNew.reportedIssueRequired');
     if (!selectedEquipmentId && !manualAddress.trim()) {
-      errors.address = 'Address is required when no equipment is selected.';
+      errors.address = t('jobNew.addressRequiredNoEquipment');
     }
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
@@ -153,7 +164,7 @@ function NewJobContent() {
           setFormError(err.detail);
         }
       } else {
-        setFormError(err instanceof ApiError ? err.detail : 'Failed to create job.');
+        setFormError(err instanceof ApiError ? err.detail : t('jobNew.failedToCreate'));
       }
     } finally {
       setSubmitting(false);
@@ -163,13 +174,13 @@ function NewJobContent() {
   return (
     <Card className="max-w-lg">
       <CardHeader>
-        <CardTitle>New job</CardTitle>
+        <CardTitle>{t('jobNew.title')}</CardTitle>
       </CardHeader>
       <CardContent>
         {formError && <p className="mb-3 text-sm text-destructive">{formError}</p>}
         <form onSubmit={(e) => void handleSubmit(e)} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1">
-            <Label>Customer</Label>
+            <Label>{t('jobNew.customer')}</Label>
             {selectedCustomer ? (
               <div className="flex items-center justify-between rounded-lg border border-input px-2.5 py-1.5 text-sm">
                 <span>
@@ -185,29 +196,30 @@ function NewJobContent() {
                     setSelectedEquipmentId('');
                   }}
                 >
-                  Change
+                  {t('jobNew.change')}
                 </Button>
               </div>
             ) : (
               <div className="relative">
                 <Input
-                  placeholder="Search by name or phone…"
+                  placeholder={t('jobNew.searchPlaceholder')}
                   value={customerSearch}
                   aria-invalid={!!fieldErrors.customer}
                   onChange={(e) => {
                     setCustomerSearch(e.target.value);
                     if (!e.target.value.trim()) setCustomerResults([]);
+                    clearFieldError('customer');
                   }}
                 />
                 {customerSearch.trim() && (
-                  <div className="mt-1 max-h-48 overflow-y-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
+                  <div className="mt-1 max-h-48 overflow-y-auto rounded-lg border border-border">
                     {searchingCustomers ? (
-                      <p className="px-2.5 py-1.5 text-sm text-zinc-500 dark:text-zinc-400">
-                        Searching…
+                      <p className="px-2.5 py-1.5 text-sm text-muted-foreground">
+                        {t('common.searching')}
                       </p>
                     ) : customerResults.length === 0 ? (
-                      <p className="px-2.5 py-1.5 text-sm text-zinc-500 dark:text-zinc-400">
-                        No matches.
+                      <p className="px-2.5 py-1.5 text-sm text-muted-foreground">
+                        {t('common.noMatches')}
                       </p>
                     ) : (
                       customerResults.map((customer) => (
@@ -218,8 +230,9 @@ function NewJobContent() {
                             setSelectedCustomer(customer);
                             setCustomerSearch('');
                             setCustomerResults([]);
+                            clearFieldError('customer');
                           }}
-                          className="block w-full px-2.5 py-1.5 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                          className="block w-full px-2.5 py-1.5 text-left text-sm hover:bg-muted"
                         >
                           {customer.full_name} — {customer.phone}
                         </button>
@@ -236,9 +249,9 @@ function NewJobContent() {
 
           {selectedCustomer && (
             <div className="flex flex-col gap-1">
-              <Label htmlFor="equipment">Equipment</Label>
+              <Label htmlFor="equipment">{t('jobNew.equipment')}</Label>
               {equipmentList === null ? (
-                <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading equipment…</p>
+                <p className="text-sm text-muted-foreground">{t('jobNew.loadingEquipment')}</p>
               ) : (
                 <select
                   id="equipment"
@@ -246,7 +259,7 @@ function NewJobContent() {
                   value={selectedEquipmentId}
                   onChange={(e) => setSelectedEquipmentId(e.target.value)}
                 >
-                  <option value="">No equipment (enter address manually)</option>
+                  <option value="">{t('jobNew.noEquipmentManual')}</option>
                   {equipmentList.map((item) => (
                     <option key={item.id} value={item.id}>
                       {item.type}
@@ -258,8 +271,10 @@ function NewJobContent() {
                 </select>
               )}
               {selectedEquipment && (
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  Address will be set to: {selectedEquipment.installation_address}
+                <p className="text-xs text-muted-foreground">
+                  {t('jobNew.addressWillBeSetTo', {
+                    address: selectedEquipment.installation_address,
+                  })}
                 </p>
               )}
             </div>
@@ -267,12 +282,15 @@ function NewJobContent() {
 
           {selectedCustomer && !selectedEquipmentId && (
             <div className="flex flex-col gap-1">
-              <Label htmlFor="address">Address</Label>
+              <Label htmlFor="address">{t('jobNew.address')}</Label>
               <Input
                 id="address"
                 value={manualAddress}
                 aria-invalid={!!fieldErrors.address}
-                onChange={(e) => setManualAddress(e.target.value)}
+                onChange={(e) => {
+                  setManualAddress(e.target.value);
+                  clearFieldError('address');
+                }}
               />
               {fieldErrors.address && (
                 <p className="text-xs text-destructive">{fieldErrors.address}</p>
@@ -281,11 +299,14 @@ function NewJobContent() {
           )}
 
           <div className="flex flex-col gap-1">
-            <Label htmlFor="reported_issue">Reported issue</Label>
+            <Label htmlFor="reported_issue">{t('jobNew.reportedIssue')}</Label>
             <textarea
               id="reported_issue"
               value={reportedIssue}
-              onChange={(e) => setReportedIssue(e.target.value)}
+              onChange={(e) => {
+                setReportedIssue(e.target.value);
+                clearFieldError('reported_issue');
+              }}
               rows={3}
               aria-invalid={!!fieldErrors.reported_issue}
               className="w-full rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
@@ -296,22 +317,22 @@ function NewJobContent() {
           </div>
 
           <div className="flex flex-col gap-1">
-            <Label htmlFor="warranty">Warranty claim</Label>
+            <Label htmlFor="warranty">{t('jobNew.warrantyClaim')}</Label>
             <select
               id="warranty"
               className={SELECT_CLASS}
               value={warrantyOverride}
               onChange={(e) => setWarrantyOverride(e.target.value as WarrantyOverride)}
             >
-              <option value="auto">Auto-detect (default)</option>
-              <option value="yes">Mark as warranty claim</option>
-              <option value="no">Not a warranty claim</option>
+              <option value="auto">{t('jobNew.autoDetect')}</option>
+              <option value="yes">{t('jobNew.markAsWarranty')}</option>
+              <option value="no">{t('jobNew.notWarranty')}</option>
             </select>
           </div>
 
           <div className="flex gap-2">
             <Button type="submit" disabled={submitting}>
-              {submitting ? 'Creating…' : 'Create job'}
+              {submitting ? t('jobNew.creating') : t('jobNew.createJob')}
             </Button>
             <Button
               type="button"
@@ -319,7 +340,7 @@ function NewJobContent() {
               onClick={() => router.push('/jobs')}
               disabled={submitting}
             >
-              Cancel
+              {t('common.cancel')}
             </Button>
           </div>
         </form>

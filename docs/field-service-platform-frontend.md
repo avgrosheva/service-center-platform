@@ -161,7 +161,7 @@ Companion document to the Product Definition, Technical Blueprint, and Backend I
 
 **Components implemented:**
 - `app/(authenticated)/customers/page.tsx` (list + search)
-- `app/(authenticated)/customers/[id]/page.tsx` (detail — shows equipment list and job history, both populated in later milestones once those pieces exist; stub gracefully until then)
+- `app/(authenticated)/customers/[id]/page.tsx` (detail — shows equipment list and job history; job history landed after F7 shipped `customer_id`/`equipment_id` filters on `GET /jobs`, via a shared `JobHistoryList` component reused by both this page and Equipment Detail)
 - Create/edit forms (shadcn form components)
 
 **Dependencies:** F3.
@@ -203,7 +203,7 @@ Companion document to the Product Definition, Technical Blueprint, and Backend I
 **Testing checklist:**
 - [ ] Equipment list under a customer renders and links to detail
 - [ ] Create/edit round-trips correctly
-- [ ] Repair history on equipment detail shows real jobs once F7+ exist (can stub/skip this specific check until Jobs milestones land, but revisit before calling F6 done)
+- [x] Repair history on equipment detail shows real jobs, filtered by `equipment_id` on `GET /jobs` — landed post-F7, once that filter existed
 
 **Complexity:** Low
 **Estimated time:** 0.75 day
@@ -223,7 +223,7 @@ Companion document to the Product Definition, Technical Blueprint, and Backend I
 
 **Dependencies:** F3.
 
-**API endpoints consumed:** `GET /api/v1/jobs` (with query filters).
+**API endpoints consumed:** `GET /api/v1/jobs` (with query filters — `status`, `assigned_technician_id`, `scheduled_from`/`scheduled_to`, plus `customer_id`/`equipment_id` added later specifically for the Customer/Equipment Detail job-history sections in F5/F6).
 
 **Business logic:** for technicians, this list is implicitly scoped to their own assigned jobs by the backend already (Milestone 9's `_can_view_or_act_on_jobs` scoping) — the frontend doesn't need to filter client-side, just needs to not show a technician-only filter dropdown to a technician (since it'd be meaningless).
 
@@ -440,7 +440,7 @@ Companion document to the Product Definition, Technical Blueprint, and Backend I
 
 **Components implemented:**
 - `app/(authenticated)/settings/page.tsx` — org name/info (read-only for MVP unless the backend adds an update endpoint — check before building an edit form that has nowhere to submit to)
-- User management: list, create, edit role/active-status, deactivate — full CRUD matching the backend's `/api/v1/users` from Milestone 5
+- User management: list, create, edit role/active-status, deactivate — full CRUD matching the backend's `/api/v1/users` from Milestone 5. `PATCH /users/{id}` later gained an optional `password` field, exposed as an owner-only "reset password" control next to role/active-status, for the case where a teammate forgets theirs and isn't logged in anywhere to use the self-service `/profile` flow.
 
 **Dependencies:** F3.
 
@@ -561,6 +561,16 @@ The table order is the recommended order — F0–F3 (bootstrap, API client, aut
 **Never cut:** F0–F12. That's the operational backbone the entire Product Definition is built around, on the frontend exactly as on the backend.
 
 ---
+
+## Post-Roadmap Additions
+
+Shipped after F0–F17, in response to direct user feedback rather than as pre-planned milestones. Recorded here so this document stays a reliable map of what exists, not just what was originally planned:
+
+- **Localization (English/Russian toggle).** A full `t()`/`useLocale()` layer under `frontend/lib/i18n/` (`context.tsx`, `en.ts` source-of-truth dictionary, `ru.ts` mirror) covers every page and component — not just the Cyrillic-ready typography the Product Definition called for, but a real runtime-switchable UI language. A `LocaleToggle` sits beside the profile menu on every authenticated screen; locale persists per browser and is detected from `navigator.language` on first visit.
+- **Self-service Profile (`/profile`).** A user editing their own name, email, phone, password (current-password-gated), and avatar (presigned-upload flow, same shape as job photos). Backend: `User` gained `phone`/`avatar_s3_key` columns; `PATCH /auth/me`, `POST /auth/me/password`, and the `/auth/me/avatar` upload-url/confirm/delete trio were added, distinct from the owner-only `/users/{id}` management in F15.
+- **Owner password reset.** `PATCH /users/{id}` (F15's user management) gained an optional `password` field so an owner can reset a teammate's forgotten password directly.
+- **Job history on Customer/Equipment Detail.** `GET /jobs` gained `customer_id`/`equipment_id` filters specifically to fill in what F5/F6 originally stubbed; both detail pages now render a real, clickable job list via a shared `JobHistoryList` component.
+- **Design system.** The frontend now runs a custom "Studio Console" design system (see `DESIGN.md`) rather than default shadcn tokens — this postdates F0–F17, which didn't specify a visual identity beyond "shadcn/ui."
 
 ## Open Decisions to Confirm Before Starting
 

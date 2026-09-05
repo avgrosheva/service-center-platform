@@ -24,6 +24,8 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { useLocale } from '@/lib/i18n/context';
+import type { TranslationKey } from '@/lib/i18n/context';
 import { ApiError, browserApiClient } from '@/lib/api-client';
 import type {
   Photo,
@@ -46,10 +48,10 @@ type PendingUpload = {
   error?: string;
 };
 
-const TAG_LABELS: Record<PhotoTag, string> = {
-  before: 'Before',
-  after: 'After',
-  general: 'General',
+const TAG_KEYS: Record<PhotoTag, TranslationKey> = {
+  before: 'jobPhotos.before',
+  after: 'jobPhotos.after',
+  general: 'jobPhotos.general',
 };
 
 export function JobPhotos({
@@ -62,6 +64,7 @@ export function JobPhotos({
   /** Milestone F13 — a bigger, full-width upload trigger for a technician's one-handed mobile view. */
   large?: boolean;
 }) {
+  const { t } = useLocale();
   const [photos, setPhotos] = useState<Photo[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedTag, setSelectedTag] = useState<PhotoTag | ''>('');
@@ -77,12 +80,13 @@ export function JobPhotos({
         if (!cancelled) setPhotos(data);
       } catch (err) {
         if (!cancelled)
-          setLoadError(err instanceof ApiError ? err.detail : 'Failed to load photos.');
+          setLoadError(err instanceof ApiError ? err.detail : t('jobPhotos.failedToLoad'));
       }
     })();
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobId]);
 
   const runFromStep = async (upload: PendingUpload) => {
@@ -139,7 +143,7 @@ export function JobPhotos({
             ? err.detail
             : err instanceof Error
               ? err.message
-              : 'Upload failed.',
+              : t('jobPhotos.uploadFailed'),
       });
     }
   };
@@ -149,9 +153,7 @@ export function JobPhotos({
     if (!file) return;
     setFileTypeError(null);
     if (!ACCEPTED_CONTENT_TYPES.includes(file.type)) {
-      setFileTypeError(
-        `Unsupported file type ("${file.type || 'unknown'}"). Use JPEG, PNG, WEBP, or HEIC.`,
-      );
+      setFileTypeError(t('jobPhotos.unsupportedFileType', { type: file.type || 'unknown' }));
       if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
@@ -163,9 +165,9 @@ export function JobPhotos({
       {loadError && <p className="text-sm text-destructive">{loadError}</p>}
 
       {photos === null ? (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading…</p>
+        <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
       ) : photos.length === 0 ? (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">No photos yet.</p>
+        <p className="text-sm text-muted-foreground">{t('jobPhotos.noPhotosYet')}</p>
       ) : (
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
           {photos.map((photo) => (
@@ -180,12 +182,10 @@ export function JobPhotos({
               <img
                 src={photo.view_url}
                 alt={photo.tag ?? 'Job photo'}
-                className="aspect-square w-full rounded-md object-cover ring-1 ring-zinc-200 group-hover:opacity-90 dark:ring-zinc-800"
+                className="aspect-square w-full rounded-md object-cover ring-1 ring-border group-hover:opacity-90"
               />
               {photo.tag && (
-                <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                  {TAG_LABELS[photo.tag]}
-                </span>
+                <span className="text-xs text-muted-foreground">{t(TAG_KEYS[photo.tag])}</span>
               )}
             </a>
           ))}
@@ -203,10 +203,10 @@ export function JobPhotos({
               : 'h-8 rounded-lg border border-input bg-transparent px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30'
           }
         >
-          <option value="">No tag</option>
-          <option value="before">Before</option>
-          <option value="after">After</option>
-          <option value="general">General</option>
+          <option value="">{t('jobPhotos.noTag')}</option>
+          <option value="before">{t('jobPhotos.before')}</option>
+          <option value="after">{t('jobPhotos.after')}</option>
+          <option value="general">{t('jobPhotos.general')}</option>
         </select>
         <Button
           type="button"
@@ -217,11 +217,11 @@ export function JobPhotos({
         >
           {pending && !pending.error
             ? pending.step === 'url'
-              ? 'Requesting upload URL…'
+              ? t('jobPhotos.requestingUploadUrl')
               : pending.step === 'upload'
-                ? 'Uploading…'
-                : 'Saving…'
-            : 'Upload photo'}
+                ? t('jobPhotos.uploading')
+                : t('common.saving')
+            : t('jobPhotos.uploadPhoto')}
         </Button>
         <input
           ref={fileInputRef}
@@ -239,7 +239,7 @@ export function JobPhotos({
           <p className="text-sm text-destructive">{pending.error}</p>
           <div className="flex gap-2">
             <Button size="sm" onClick={() => void runFromStep(pending)}>
-              Retry
+              {t('jobPhotos.retry')}
             </Button>
             <Button
               size="sm"
@@ -248,10 +248,10 @@ export function JobPhotos({
                 void runFromStep({ file: pending.file, tag: pending.tag, step: 'url' })
               }
             >
-              Start over
+              {t('jobPhotos.startOver')}
             </Button>
             <Button size="sm" variant="ghost" onClick={() => setPending(null)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
           </div>
         </div>

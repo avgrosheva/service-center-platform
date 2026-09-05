@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useLocale } from '@/lib/i18n/context';
+import type { TranslationKey } from '@/lib/i18n/context';
 import { ApiError, browserApiClient } from '@/lib/api-client';
 import { parseFieldErrors } from '@/lib/form-errors';
 import type {
@@ -16,16 +18,21 @@ type DraftValues = { name: string; quantity: string; unit_cost: string };
 
 const EMPTY_DRAFT: DraftValues = { name: '', quantity: '', unit_cost: '' };
 
-function validateDraft(values: DraftValues): Record<string, string> {
+function validateDraft(
+  values: DraftValues,
+  t: (key: TranslationKey) => string,
+): Record<string, string> {
   const errors: Record<string, string> = {};
-  if (!values.name.trim()) errors.name = 'Name is required.';
+  if (!values.name.trim()) errors.name = t('jobMaterials.nameRequired');
   const qty = Number(values.quantity);
   if (!values.quantity.trim() || !Number.isFinite(qty) || qty <= 0) {
-    errors.quantity = 'Quantity must be greater than 0.';
+    errors.quantity = t('jobMaterials.quantityMustBePositive');
   }
   if (values.unit_cost.trim()) {
     const cost = Number(values.unit_cost);
-    if (!Number.isFinite(cost) || cost < 0) errors.unit_cost = 'Unit cost must be 0 or more.';
+    if (!Number.isFinite(cost) || cost < 0) {
+      errors.unit_cost = t('jobMaterials.unitCostMustBeNonNegative');
+    }
   }
   return errors;
 }
@@ -36,6 +43,7 @@ function total(item: MaterialItem): string {
 }
 
 export function JobMaterials({ jobId, onActivity }: { jobId: string; onActivity?: () => void }) {
+  const { t } = useLocale();
   const [materials, setMaterials] = useState<MaterialItem[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -60,17 +68,18 @@ export function JobMaterials({ jobId, onActivity }: { jobId: string; onActivity?
         if (!cancelled) setMaterials(data);
       } catch (err) {
         if (!cancelled)
-          setLoadError(err instanceof ApiError ? err.detail : 'Failed to load materials.');
+          setLoadError(err instanceof ApiError ? err.detail : t('jobMaterials.failedToLoad'));
       }
     })();
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobId]);
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    const errors = validateDraft(newDraft);
+    const errors = validateDraft(newDraft, t);
     if (Object.keys(errors).length > 0) {
       setNewErrors(errors);
       return;
@@ -95,7 +104,7 @@ export function JobMaterials({ jobId, onActivity }: { jobId: string; onActivity?
       if (err instanceof ApiError && err.kind === 'validation') {
         setNewErrors(parseFieldErrors(err.detail));
       } else {
-        setActionError(err instanceof ApiError ? err.detail : 'Failed to add material.');
+        setActionError(err instanceof ApiError ? err.detail : t('jobMaterials.failedToAdd'));
       }
     } finally {
       setAdding(false);
@@ -110,7 +119,7 @@ export function JobMaterials({ jobId, onActivity }: { jobId: string; onActivity?
   };
 
   const handleSaveEdit = async (id: string) => {
-    const errors = validateDraft(editDraft);
+    const errors = validateDraft(editDraft, t);
     if (Object.keys(errors).length > 0) {
       setEditErrors(errors);
       return;
@@ -135,7 +144,7 @@ export function JobMaterials({ jobId, onActivity }: { jobId: string; onActivity?
       if (err instanceof ApiError && err.kind === 'validation') {
         setEditErrors(parseFieldErrors(err.detail));
       } else {
-        setActionError(err instanceof ApiError ? err.detail : 'Failed to save material.');
+        setActionError(err instanceof ApiError ? err.detail : t('jobMaterials.failedToSave'));
       }
     } finally {
       setSaving(false);
@@ -150,7 +159,7 @@ export function JobMaterials({ jobId, onActivity }: { jobId: string; onActivity?
       setMaterials((prev) => prev?.filter((m) => m.id !== id) ?? prev);
       onActivity?.();
     } catch (err) {
-      setActionError(err instanceof ApiError ? err.detail : 'Failed to remove material.');
+      setActionError(err instanceof ApiError ? err.detail : t('jobMaterials.failedToRemove'));
     } finally {
       setRemovingId(null);
       setConfirmRemoveId(null);
@@ -163,28 +172,25 @@ export function JobMaterials({ jobId, onActivity }: { jobId: string; onActivity?
       {actionError && <p className="text-sm text-destructive">{actionError}</p>}
 
       {materials === null ? (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">Loading…</p>
+        <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
       ) : materials.length === 0 ? (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">No materials logged yet.</p>
+        <p className="text-sm text-muted-foreground">{t('jobMaterials.noMaterialsYet')}</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
+        <div className="overflow-x-auto rounded-lg border border-border">
           <table className="w-full min-w-[420px] text-left text-sm">
-            <thead className="border-b border-zinc-200 text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+            <thead className="border-b border-border text-xs text-muted-foreground">
               <tr>
-                <th className="px-3 py-2 font-medium">Name</th>
-                <th className="px-3 py-2 font-medium">Qty</th>
-                <th className="px-3 py-2 font-medium">Unit cost</th>
-                <th className="px-3 py-2 font-medium">Total</th>
+                <th className="px-3 py-2 font-medium">{t('jobMaterials.tableName')}</th>
+                <th className="px-3 py-2 font-medium">{t('jobMaterials.tableQty')}</th>
+                <th className="px-3 py-2 font-medium">{t('jobMaterials.tableUnitCost')}</th>
+                <th className="px-3 py-2 font-medium">{t('jobMaterials.tableTotal')}</th>
                 <th className="px-3 py-2 font-medium" />
               </tr>
             </thead>
             <tbody>
               {materials.map((item) =>
                 editingId === item.id ? (
-                  <tr
-                    key={item.id}
-                    className="border-b border-zinc-100 last:border-0 dark:border-zinc-900"
-                  >
+                  <tr key={item.id} className="border-b border-border last:border-0">
                     <td className="px-3 py-2">
                       <Input
                         value={editDraft.name}
@@ -218,14 +224,14 @@ export function JobMaterials({ jobId, onActivity }: { jobId: string; onActivity?
                         <p className="text-xs text-destructive">{editErrors.unit_cost}</p>
                       )}
                     </td>
-                    <td className="px-3 py-2 text-zinc-500">—</td>
+                    <td className="px-3 py-2 text-muted-foreground">—</td>
                     <td className="px-3 py-2 text-right whitespace-nowrap">
                       <Button
                         size="sm"
                         onClick={() => void handleSaveEdit(item.id)}
                         disabled={saving}
                       >
-                        {saving ? 'Saving…' : 'Save'}
+                        {saving ? t('common.saving') : t('common.save')}
                       </Button>
                       <Button
                         size="sm"
@@ -233,15 +239,12 @@ export function JobMaterials({ jobId, onActivity }: { jobId: string; onActivity?
                         onClick={() => setEditingId(null)}
                         disabled={saving}
                       >
-                        Cancel
+                        {t('common.cancel')}
                       </Button>
                     </td>
                   </tr>
                 ) : (
-                  <tr
-                    key={item.id}
-                    className="border-b border-zinc-100 last:border-0 dark:border-zinc-900"
-                  >
+                  <tr key={item.id} className="border-b border-border last:border-0">
                     <td className="px-3 py-2">{item.name}</td>
                     <td className="px-3 py-2">{item.quantity}</td>
                     <td className="px-3 py-2">{item.unit_cost ?? '—'}</td>
@@ -255,27 +258,27 @@ export function JobMaterials({ jobId, onActivity }: { jobId: string; onActivity?
                             onClick={() => void handleRemove(item.id)}
                             disabled={removingId === item.id}
                           >
-                            Confirm
+                            {t('common.confirm')}
                           </Button>
                           <Button
                             size="sm"
                             variant="ghost"
                             onClick={() => setConfirmRemoveId(null)}
                           >
-                            Cancel
+                            {t('common.cancel')}
                           </Button>
                         </span>
                       ) : (
                         <span className="inline-flex gap-2">
                           <Button size="sm" variant="ghost" onClick={() => startEdit(item)}>
-                            Edit
+                            {t('common.edit')}
                           </Button>
                           <Button
                             size="sm"
                             variant="ghost"
                             onClick={() => setConfirmRemoveId(item.id)}
                           >
-                            Remove
+                            {t('jobMaterials.remove')}
                           </Button>
                         </span>
                       )}
@@ -291,7 +294,7 @@ export function JobMaterials({ jobId, onActivity }: { jobId: string; onActivity?
       <form onSubmit={(e) => void handleAdd(e)} className="flex flex-wrap items-start gap-2">
         <div className="flex flex-col gap-1">
           <Input
-            placeholder="Name"
+            placeholder={t('jobMaterials.namePlaceholder')}
             value={newDraft.name}
             aria-invalid={!!newErrors.name}
             onChange={(e) => setNewDraft((v) => ({ ...v, name: e.target.value }))}
@@ -301,7 +304,7 @@ export function JobMaterials({ jobId, onActivity }: { jobId: string; onActivity?
         </div>
         <div className="flex flex-col gap-1">
           <Input
-            placeholder="Qty"
+            placeholder={t('jobMaterials.qtyPlaceholder')}
             value={newDraft.quantity}
             aria-invalid={!!newErrors.quantity}
             onChange={(e) => setNewDraft((v) => ({ ...v, quantity: e.target.value }))}
@@ -311,7 +314,7 @@ export function JobMaterials({ jobId, onActivity }: { jobId: string; onActivity?
         </div>
         <div className="flex flex-col gap-1">
           <Input
-            placeholder="Unit cost"
+            placeholder={t('jobMaterials.unitCostPlaceholder')}
             value={newDraft.unit_cost}
             aria-invalid={!!newErrors.unit_cost}
             onChange={(e) => setNewDraft((v) => ({ ...v, unit_cost: e.target.value }))}
@@ -320,7 +323,7 @@ export function JobMaterials({ jobId, onActivity }: { jobId: string; onActivity?
           {newErrors.unit_cost && <p className="text-xs text-destructive">{newErrors.unit_cost}</p>}
         </div>
         <Button type="submit" disabled={adding}>
-          {adding ? 'Adding…' : 'Add material'}
+          {adding ? t('jobMaterials.adding') : t('jobMaterials.addMaterial')}
         </Button>
       </form>
     </div>

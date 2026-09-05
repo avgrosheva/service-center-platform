@@ -30,6 +30,7 @@ Milestone 9's assign/cancel precedent for actions that are dispatch
 decisions rather than field actions.
 """
 
+import re
 import uuid
 
 from sqlalchemy import select
@@ -75,6 +76,26 @@ _EXTENSION_BY_CONTENT_TYPE: dict[str, str] = {
     "image/heic": "heic",
 }
 
+# Matches exactly what generate_photo_upload_url builds for a given job —
+# create_photo checks a submitted s3_key against this rather than trusting
+# it outright. Without this, a client could confirm ANY key as a photo on
+# a job they can write to (another organization's job photo, a document,
+# ...) and _with_view_url would then hand back a valid presigned GET URL
+# for it — an IDOR letting an authenticated user read arbitrary objects in
+# the shared bucket, not just their own job's. Same fix as
+# user_service.py's own _is_own_avatar_key, for the same reason.
+_PHOTO_KEY_PATTERN = re.compile(
+    r"^(?P<organization_id>[0-9a-f-]{36})/jobs/(?P<job_id>[0-9a-f-]{36})/photos/"
+    r"[0-9a-f-]{36}\.(?:jpg|png|webp|heic)$"
+)
+
+
+def _is_own_photo_key(organization_id: uuid.UUID, job_id: uuid.UUID, s3_key: str) -> bool:
+    match = _PHOTO_KEY_PATTERN.match(s3_key)
+    if match is None:
+        return False
+    return match["organization_id"] == str(organization_id) and match["job_id"] == str(job_id)
+
 
 class JobItemsServiceError(Exception):
     """Base class for job-sub-resource failures the router maps to HTTP status codes."""
@@ -85,6 +106,10 @@ class JobNotFoundError(JobItemsServiceError):
 
 
 class ForbiddenJobAccessError(JobItemsServiceError):
+    pass
+
+
+class InvalidPhotoKeyError(JobItemsServiceError):
     pass
 
 
@@ -139,6 +164,8 @@ async def create_photo(
     requesting_user: User,
 ) -> Photo:
     job = await _get_job_for_access(db, organization_id, job_id, requesting_user=requesting_user)
+    if not _is_own_photo_key(organization_id, job_id, s3_key):
+        raise InvalidPhotoKeyError("This s3_key was not issued for this job's photos")
 
     photo = Photo(job_id=job.id, uploaded_by_id=requesting_user.id, s3_key=s3_key, tag=tag)
     db.add(photo)

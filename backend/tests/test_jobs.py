@@ -585,6 +585,45 @@ async def test_owner_list_filters_by_assigned_technician(client):
 
 
 @pytest.mark.asyncio
+async def test_list_filters_by_customer_id(client):
+    owner = await _register_org(client)
+    headers = _auth_headers(owner["access_token"])
+    customer_a = await _create_customer(client, owner["access_token"], full_name="Customer A")
+    customer_b = await _create_customer(client, owner["access_token"], full_name="Customer B")
+    job_a = await _create_job(client, owner["access_token"], customer_id=customer_a["id"], address="A")
+    await _create_job(client, owner["access_token"], customer_id=customer_b["id"], address="B")
+
+    response = await client.get(
+        "/api/v1/jobs", params={"customer_id": customer_a["id"]}, headers=headers
+    )
+
+    assert response.status_code == 200
+    assert {j["id"] for j in response.json()} == {job_a["id"]}
+
+
+@pytest.mark.asyncio
+async def test_list_filters_by_equipment_id(client):
+    owner = await _register_org(client)
+    headers = _auth_headers(owner["access_token"])
+    customer = await _create_customer(client, owner["access_token"])
+    equipment_a = await _create_equipment(client, owner["access_token"], customer["id"])
+    equipment_b = await _create_equipment(client, owner["access_token"], customer["id"])
+    job_a = await _create_job(
+        client, owner["access_token"], customer_id=customer["id"], equipment_id=equipment_a["id"]
+    )
+    await _create_job(
+        client, owner["access_token"], customer_id=customer["id"], equipment_id=equipment_b["id"]
+    )
+
+    response = await client.get(
+        "/api/v1/jobs", params={"equipment_id": equipment_a["id"]}, headers=headers
+    )
+
+    assert response.status_code == 200
+    assert {j["id"] for j in response.json()} == {job_a["id"]}
+
+
+@pytest.mark.asyncio
 async def test_patch_updates_editable_fields_but_not_status(client):
     owner = await _register_org(client)
     headers = _auth_headers(owner["access_token"])

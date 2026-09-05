@@ -76,6 +76,8 @@ The job timeline keeps the operational history visible as the repair moves throu
 - **Documents** — generate PDF documents and store them with the repair record.
 - **Warranty** — connect follow-up work to previous equipment repairs and warranty context.
 - **Dashboard** — owner-level operational visibility across service activity.
+- **Self-service profile** — a signed-in user can edit their own name, email, phone, password, and avatar; an owner can reset a teammate's forgotten password from Settings.
+- **English / Russian UI toggle** — every screen is fully localized, with the active language persisted per browser.
 - **Optional AI assistance** — the backend includes an optional AI-assist layer that supports the workflow without replacing operational decisions.
 
 <img src="docs/images/jobs.png" width="90%" alt="Service Center Platform jobs"/>
@@ -151,6 +153,7 @@ service-center-platform/
 │   │   ├── workers/           # Background task functions
 │   │   ├── config.py
 │   │   ├── database.py
+│   │   ├── dependencies.py
 │   │   ├── main.py
 │   │   └── seed_demo_data.py
 │   ├── alembic/               # Database migrations
@@ -292,7 +295,7 @@ The frontend API client prefixes requests with `/api/v1` on top of `NEXT_PUBLIC_
 
 ### Backend Without Docker
 
-From the repository root:
+From the repository root, using plain `venv`:
 
 ```powershell
 cd backend
@@ -304,16 +307,26 @@ pip install -r requirements.txt
 Copy-Item .env.example .env
 ```
 
+If you use [`uv`](https://docs.astral.sh/uv/) instead, create the virtualenv at the **repository root** (not inside `backend/`) so `uv run` picks it up from either directory:
+
+```powershell
+uv venv
+uv pip install -r backend/requirements.txt
+Copy-Item backend/.env.example backend/.env
+```
+
 Set `DATABASE_URL` in `backend/.env` to a local PostgreSQL instance, for example:
 
 ```env
 DATABASE_URL=postgresql+asyncpg://fsp:dev_password_change_me@localhost:5432/field_service
 ```
 
-Create the `field_service` database and `fsp` user, then run:
+Create the `field_service` database and `fsp` user, then run (from `backend/`):
 
 ```powershell
 uvicorn app.main:app --reload
+# or, with uv, from either the repo root or backend/:
+uv run uvicorn app.main:app --reload
 ```
 
 Check:
@@ -329,15 +342,16 @@ Run migrations from `backend/`:
 ```bash
 cd backend
 alembic upgrade head
+# or: uv run alembic upgrade head
 ```
 
 ### Tests and Frontend Checks
 
-Backend:
+Backend, from `backend/`:
 
 ```bash
-cd backend
 pytest
+# or: uv run pytest
 ```
 
 Frontend, from `frontend/`:
@@ -353,7 +367,7 @@ npm run build
 
 The MVP focuses on the operational repair lifecycle: authentication and organization/users, customers, equipment, repair jobs, assignments, status transitions and timeline, photos, materials, additional work, payments, documents, warranty logic, owner dashboard, and the existing optional AI-assist layer.
 
-The web frontend covers the main authenticated workflows, including dashboard, customers, equipment, jobs, schedule, and settings.
+The web frontend covers the main authenticated workflows, including dashboard, customers, equipment, jobs, schedule, settings, and a self-service profile page — fully localized in English and Russian.
 
 ## Out of Scope
 

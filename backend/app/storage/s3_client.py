@@ -42,6 +42,20 @@ _client = boto3.client(
     region_name="us-east-1",
 )
 
+# A second client, identical except for its endpoint, used only for
+# presigned URLs: those are handed to the browser, which — unlike this
+# process — cannot resolve the Docker Compose service name `minio` and
+# must be given whatever host it can actually reach (see
+# `s3_public_endpoint_url`'s docstring in app/config.py).
+_public_client = boto3.client(
+    "s3",
+    endpoint_url=settings.s3_public_endpoint_url or settings.s3_endpoint_url,
+    aws_access_key_id=settings.s3_access_key,
+    aws_secret_access_key=settings.s3_secret_key,
+    config=BotoConfig(signature_version="s3v4", s3={"addressing_style": "path"}),
+    region_name="us-east-1",
+)
+
 
 def generate_presigned_upload_url(key: str, content_type: str) -> str:
     """
@@ -50,7 +64,7 @@ def generate_presigned_upload_url(key: str, content_type: str) -> str:
     match the header the client actually sends on the PUT — S3 rejects the
     upload otherwise, since it's part of what's signed.
     """
-    return _client.generate_presigned_url(
+    return _public_client.generate_presigned_url(
         "put_object",
         Params={"Bucket": settings.s3_bucket_name, "Key": key, "ContentType": content_type},
         ExpiresIn=PRESIGNED_URL_EXPIRY_SECONDS,
@@ -66,7 +80,7 @@ def generate_presigned_download_url(key: str) -> str:
     thumbnail grid has something to point an `<img>` at without the bucket
     itself ever needing to be public.
     """
-    return _client.generate_presigned_url(
+    return _public_client.generate_presigned_url(
         "get_object",
         Params={"Bucket": settings.s3_bucket_name, "Key": key},
         ExpiresIn=PRESIGNED_URL_EXPIRY_SECONDS,

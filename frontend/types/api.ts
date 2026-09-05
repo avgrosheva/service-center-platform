@@ -104,6 +104,12 @@ export interface User {
   email: string;
   full_name: string;
   role: UserRole;
+  phone: string | null;
+  // Only ever populated on `/auth/me` responses (the signed-in user's own
+  // profile) — omitted (not just null) on every other User read, like the
+  // org's user roster in Settings, since generating a presigned URL for
+  // every row there would be wasted work for avatars nothing renders.
+  avatar_url?: string | null;
   is_active: boolean;
   created_at: IsoDateTime;
   updated_at: IsoDateTime;
@@ -119,6 +125,33 @@ export interface UserCreateRequest {
 export interface UserUpdateRequest {
   role?: UserRole;
   is_active?: boolean;
+  /** Owner resetting a teammate's forgotten password — bypasses the current-password check /auth/me/password requires, since the caller is an admin acting on someone else's account, not the account holder. */
+  password?: string;
+}
+
+export interface MeUpdateRequest {
+  full_name?: string;
+  email?: string;
+  /** `""` clears it — the one field on this request that's nullable. */
+  phone?: string;
+}
+
+export interface PasswordChangeRequest {
+  current_password: string;
+  new_password: string;
+}
+
+export interface AvatarUploadUrlRequest {
+  content_type: PhotoContentType;
+}
+
+export interface AvatarUploadUrlResponse {
+  upload_url: string;
+  s3_key: string;
+}
+
+export interface AvatarConfirmRequest {
+  s3_key: string;
 }
 
 // --- Auth ---

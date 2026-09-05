@@ -111,6 +111,8 @@ async def list_jobs(
     assigned_technician_id: uuid.UUID | None = None,
     scheduled_from: datetime | None = None,
     scheduled_to: datetime | None = None,
+    customer_id: uuid.UUID | None = None,
+    equipment_id: uuid.UUID | None = None,
 ) -> list[Job]:
     # A technician can never list anyone's jobs but their own — override
     # whatever the client asked for rather than merely AND-ing it in, so
@@ -128,6 +130,10 @@ async def list_jobs(
         stmt = stmt.where(Job.scheduled_at >= scheduled_from)
     if scheduled_to is not None:
         stmt = stmt.where(Job.scheduled_at <= scheduled_to)
+    if customer_id is not None:
+        stmt = stmt.where(Job.customer_id == customer_id)
+    if equipment_id is not None:
+        stmt = stmt.where(Job.equipment_id == equipment_id)
     stmt = stmt.order_by(Job.created_at)
     result = await db.execute(stmt)
     return list(result.scalars().all())
